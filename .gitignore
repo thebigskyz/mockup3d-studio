@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Blender backup files
+*.blend1
+*.blend2
+
+# Local test files
+.test/

@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mockup3D Studio</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#161619">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Mockup3D">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="module" src="js/pwa.js"></script>
+  <script type="module" src="js/update-check.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+        "mp4-muxer": "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm",
+        "fflate": "https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js",
+        "mp4box": "https://cdn.jsdelivr.net/npm/mp4box@0.5.2/+esm"
+      }
+    }
+  </script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="10.2" y="4.6" width="3.6" height="1.2" rx=".6" fill="currentColor"/></symbol>
+      <!-- The Bauhaus mark (as in icons/icon.svg), in its own colours. -->
+      <symbol id="i-mark" viewBox="-7 -2 104 104"><circle cx="66" cy="36" r="24" fill="#E0483B"/><path d="M0 88a30 30 0 0 1 60 0z" fill="#F3C343"/><rect x="36" y="22" width="34" height="66" rx="5.5" fill="#151515"/><rect x="30" y="16" width="34" height="66" rx="5.5" fill="#2F69AE"/><rect x="41.2" y="20.5" width="11.6" height="4" rx="2" fill="#EFE7D9"/></symbol>
+      <symbol id="i-tablet" viewBox="0 0 24 24"><rect x="4.5" y="2.5" width="15" height="19" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="4.6" r=".7" fill="currentColor"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><rect x="7" y="5.5" width="3.6" height="13" rx="1" fill="currentColor"/><rect x="13.4" y="5.5" width="3.6" height="13" rx="1" fill="currentColor"/></symbol>
+      <symbol id="i-start" viewBox="0 0 24 24"><path d="M6 6h2v12H6z M19 6v12l-9-6z" fill="currentColor"/></symbol>
+      <symbol id="i-end" viewBox="0 0 24 24"><path d="M16 6h2v12h-2z M5 6v12l9-6z" fill="currentColor"/></symbol>
+      <symbol id="i-prevkey" viewBox="0 0 24 24"><path d="M14 12l4.5-4.5L23 12l-4.5 4.5z" fill="currentColor"/><path d="M11 6v12L2 12z" fill="currentColor"/></symbol>
+      <symbol id="i-nextkey" viewBox="0 0 24 24"><path d="M1 12l4.5-4.5L10 12l-4.5 4.5z" fill="currentColor"/><path d="M13 6v12l9-6z" fill="currentColor"/></symbol>
+      <symbol id="i-loop" viewBox="0 0 24 24"><path d="M17 4l3 3-3 3M20 7H8a4 4 0 00-4 4v1M7 20l-3-3 3-3M4 17h12a4 4 0 004-4v-1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24"><path d="M12 3.5l8.5 8.5-8.5 8.5L3.5 12z" fill="currentColor"/></symbol>
+      <symbol id="i-key-o" viewBox="0 0 24 24"><path d="M12 4.5l7.5 7.5-7.5 7.5L4.5 12z" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4m0 0l-4 4m4-4l4 4M5 15v3.5A1.5 1.5 0 006.5 20h11a1.5 1.5 0 001.5-1.5V15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-reset" viewBox="0 0 24 24"><path d="M5 12a7 7 0 1 0 2.05-4.95M5 4.5V8h3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+      <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-portrait" viewBox="0 0 24 24"><rect x="8" y="3.5" width="8" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+      <symbol id="i-landscape" viewBox="0 0 24 24"><rect x="3.5" y="8" width="17" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.6 5.4 3.6 8.5s-1.1 5.9-3.6 8.5c-2.5-2.6-3.6-5.4-3.6-8.5s1.1-5.9 3.6-8.5z" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+      <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 010 11H11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 000 11H13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4L4 7l3 3M4 7h12M17 14l3 3-3 3M20 17H8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-cube" viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z M4 7.5l8 4.5 8-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+      <symbol id="i-select-all" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 2.4"/><path d="M8.5 12.2l2.4 2.4 4.6-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-install" viewBox="0 0 24 24"><path d="M12 3.5v10m0 0l-3.8-3.8M12 13.5l3.8-3.8M4.5 14.5v3.5a2 2 0 002 2h11a2 2 0 002-2v-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3.5h8l4 4V20a.5.5 0 01-.5.5h-11A.5.5 0 016 20z M14 3.5V8h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+      <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8.5A1.5 1.5 0 015.5 7H8l1.5-2h5L16 7h2.5A1.5 1.5 0 0120 8.5v9a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 17.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 15V6.5A1.5 1.5 0 016.5 5H15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-al-left" viewBox="0 0 24 24"><path d="M4 3v18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="7" y="6" width="12" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="13.5" width="7" height="4.5" rx="1" fill="currentColor"/></symbol>
+      <symbol id="i-al-hcenter" viewBox="0 0 24 24"><path d="M12 3v18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="5" y="6" width="14" height="4.5" rx="1" fill="currentColor" opacity=".85"/><rect x="7.5" y="13.5" width="9" height="4.5" rx="1" fill="currentColor" opacity=".85"/></symbol>
+      <symbol id="i-al-right" viewBox="0 0 24 24"><path d="M20 3v18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="5" y="6" width="12" height="4.5" rx="1" fill="currentColor"/><rect x="10" y="13.5" width="7" height="4.5" rx="1" fill="currentColor"/></symbol>
+      <symbol id="i-al-top" viewBox="0 0 24 24"><path d="M3 4h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="6" y="7" width="4.5" height="12" rx="1" fill="currentColor"/><rect x="13.5" y="7" width="4.5" height="7" rx="1" fill="currentColor"/></symbol>
+      <symbol id="i-al-vcenter" viewBox="0 0 24 24"><path d="M3 12h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="6" y="5" width="4.5" height="14" rx="1" fill="currentColor" opacity=".85"/><rect x="13.5" y="7.5" width="4.5" height="9" rx="1" fill="currentColor" opacity=".85"/></symbol>
+      <symbol id="i-al-bottom" viewBox="0 0 24 24"><path d="M3 20h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="6" y="5" width="4.5" height="12" rx="1" fill="currentColor"/><rect x="13.5" y="10" width="4.5" height="7" rx="1" fill="currentColor"/></symbol>
+      <symbol id="i-fit" viewBox="0 0 24 24"><path d="M4 9V5.5A1.5 1.5 0 015.5 4H9M15 4h3.5A1.5 1.5 0 0120 5.5V9M20 15v3.5a1.5 1.5 0 01-1.5 1.5H15M9 20H5.5A1.5 1.5 0 014 18.5V15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="app" id="app">
+    <!-- ======================= Top bar ======================= -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo"><svg><use href="#i-mark"/></svg></span>
+        <span class="brand-name">Mockup3D <b>Studio</b></span>
+      </div>
+      <div class="project">
+        <button class="project-btn" id="projectBtn" title="Project: New, Open, Save">
+          <svg><use href="#i-file"/></svg><span id="projectName">Untitled</span><i class="dirty-dot" id="dirtyDot" hidden></i><svg class="caret"><use href="#i-chev"/></svg>
+        </button>
+        <div class="menu" id="projectMenu" hidden>
+          <button data-act="new">New project</button>
+          <button data-act="open">Open…<kbd>⌘O</kbd></button>
+          <div class="menu-sep"></div>
+          <button data-act="save">Save<kbd>⌘S</kbd></button>
+          <button data-act="saveas">Save As…<kbd>⇧⌘S</kbd></button>
+        </div>
+        <input type="file" id="projectInput" accept=".m3d" hidden>
+      </div>
+      <div class="crumbs" id="crumbs"></div>
+      <div class="top-actions">
+        <div class="install" id="install" hidden>
+          <button class="project-btn install-btn" id="installBtn" title="Install Mockup3D Studio as an app: its own window and Dock icon, and it works offline">
+            <svg><use href="#i-install"/></svg><span>Install app</span>
+          </button>
+          <div class="menu install-hint" id="installHint" hidden></div>
+        </div>
+        <div class="history-btns">
+          <button class="icon-btn" id="undoBtn" title="Undo (⌘Z)" disabled><svg><use href="#i-undo"/></svg></button>
+          <button class="icon-btn" id="redoBtn" title="Redo (⇧⌘Z)" disabled><svg><use href="#i-redo"/></svg></button>
+        </div>
+        <div class="chips" id="formatSeg" title="Export format">
+          <button data-v="png">PNG</button>
+          <button data-v="mp4">MP4</button>
+        </div>
+        <button class="btn-render" id="exportBtn">
+          <svg><use href="#i-export"/></svg><span id="exportLabel">Export PNG</span><kbd>E</kbd>
+        </button>
+      </div>
+    </header>
+
+    <!-- ======================= Media pool ======================= -->
+    <aside class="pane pane-media">
+      <div class="pane-head"><span>Media Pool</span></div>
+      <div class="pane-body">
+        <label class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" accept="image/*,video/*" hidden>
+          <div class="dz-empty" id="dzEmpty">
+            <svg class="dz-icon"><use href="#i-upload"/></svg>
+            <div class="dz-title">Import design<span class="dz-for" id="dzFor"></span></div>
+            <div class="dz-sub">Drop · click · ⌘V &nbsp;—&nbsp; PNG, JPG, MP4, MOV</div>
+          </div>
+          <div class="clip" id="clip" hidden>
+            <div class="clip-thumb" id="clipThumb"></div>
+            <div class="clip-meta">
+              <div class="clip-name" id="mediaName"></div>
+              <div class="clip-sub mono" id="mediaInfo"></div>
+            </div>
+            <button class="icon-btn" id="clearMedia" title="Remove design"><svg><use href="#i-x"/></svg></button>
+          </div>
+        </label>
+
+        <div class="sub-head with-btn">Scene <span class="sub-btns"><button class="icon-btn sm" id="selectAll" title="Select all devices (⌘A) · ⌘-click or Shift-click rows to select several"><svg><use href="#i-select-all"/></svg></button><button class="icon-btn sm" id="addDevice" title="Add a device to the scene"><svg><use href="#i-plus"/></svg></button></span></div>
+        <div class="scene-list" id="sceneList"></div>
+
+        <div class="sub-head">Model</div>
+        <div class="device-list" id="deviceSeg"></div>
+        <input type="file" id="modelInput" accept=".glb,.gltf" hidden>
+
+        <div class="sub-head">Orientation</div>
+        <div class="seg" id="orientSeg">
+          <button data-v="portrait"><svg><use href="#i-portrait"/></svg>Portrait</button>
+          <button data-v="landscape"><svg><use href="#i-landscape"/></svg>Landscape</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ======================= Viewer ======================= -->
+    <section class="pane pane-viewer">
+      <div class="pane-head viewer-head">
+        <span>Viewer</span>
+        <span class="vh-info mono" id="viewerInfo"></span>
+        <div class="vh-tools">
+          <div class="mini-seg" id="bgSeg" title="Preview background behind transparent areas (not exported)">
+            <button data-v="checker" class="bg-checker"></button>
+            <button data-v="dark" class="bg-dark"></button>
+            <button data-v="grey" class="bg-grey"></button>
+            <button data-v="light" class="bg-light"></button>
+          </div>
+          <div class="zoom-ctl" id="zoomCtl">
+            <button class="icon-btn sm" id="zoomOut" title="Zoom out (⌘−)"><svg><use href="#i-minus"/></svg></button>
+            <button class="zoom-val mono" id="zoomBtn" title="Canvas zoom — scroll to zoom, hold Space and drag (or middle-drag) to pan">100%</button>
+            <button class="icon-btn sm" id="zoomIn" title="Zoom in (⌘+)"><svg><use href="#i-plus"/></svg></button>
+            <div class="menu zoom-menu" id="zoomMenu" hidden>
+              <button data-z="fit">Fit<kbd>⌘0</kbd></button>
+              <div class="menu-sep"></div>
+              <button data-z="25">25%</button>
+              <button data-z="50">50%</button>
+              <button data-z="75">75%</button>
+              <button data-z="100">100%<kbd>⌘1</kbd></button>
+              <button data-z="150">150%</button>
+              <button data-z="200">200%</button>
+              <button data-z="400">400%</button>
+              <div class="menu-sep"></div>
+              <label class="zoom-custom">Custom<input type="number" id="zoomCustom" min="5" max="1600" step="1"><span>%</span></label>
+            </div>
+          </div>
+          <button class="icon-btn" id="fitBtn" title="Fit canvas (⌘0 or F)"><svg><use href="#i-fit"/></svg></button>
+        </div>
+      </div>
+      <div class="viewport" id="viewport" data-bg="checker">
+        <div class="frame" id="frame">
+          <div class="checker" id="checker"></div>
+          <div class="stage" id="stage"></div>
+          <div class="safe" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="frame-label mono" id="frameLabel"></div>
+        </div>
+        <div class="drop-overlay" id="dropOverlay"><div><svg><use href="#i-upload"/></svg>Drop to place on screen</div></div>
+        <div class="loading" id="loading"><span></span>Loading model</div>
+        <div class="pick-hint" id="pickHint" hidden></div>
+        <div class="progress" id="progress" hidden>
+          <div class="pg-card">
+            <div class="pg-title" id="pgTitle">Rendering MP4</div>
+            <div class="pg-bar"><i id="pgFill"></i></div>
+            <div class="pg-info mono" id="pgInfo">Preparing…</div>
+            <button class="btn-ghost" id="pgCancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div class="transport" id="transport">
+        <button class="icon-btn" id="toStart" title="Go to start (Home)"><svg><use href="#i-start"/></svg></button>
+        <button class="icon-btn" id="prevKey" title="Previous keyframe (J)"><svg><use href="#i-prevkey"/></svg></button>
+        <button class="icon-btn play" id="playBtn" title="Play / pause (Space)"><svg><use href="#i-play"/></svg></button>
+        <button class="icon-btn" id="nextKey" title="Next keyframe (L)"><svg><use href="#i-nextkey"/></svg></button>
+        <button class="icon-btn" id="toEnd" title="Go to end (End)"><svg><use href="#i-end"/></svg></button>
+        <span class="timecode mono" id="timeLabel">00:00:00:00</span>
+        <span class="tc-sep">/</span>
+        <span class="hot" id="durationv" title="Duration: drag or click to edit"></span>
+        <span class="spacer"></span>
+        <button class="tbtn" id="loopBtn" title="Loop playback"><svg><use href="#i-loop"/></svg>Loop</button>
+      </div>
+    </section>
+
+    <!-- ======================= Bottom: timeline / motion / angles ======================= -->
+    <section class="pane pane-bottom" id="bottomPane">
+      <div class="resize-handle" id="bottomResize" title="Drag to resize"></div>
+      <div class="pane-head tabs-head">
+        <div class="tabs" id="bottomTabs">
+          <button data-tab="timeline">Timeline</button>
+          <button data-tab="motion">Motion presets</button>
+          <button data-tab="angles">Angles</button>
+          <button data-tab="templates">Templates</button>
+        </div>
+        <span class="ph-hint" id="bottomHint"></span>
+      </div>
+
+      <div class="tab-body" data-tab="timeline">
+        <div class="tl" id="timeline">
+          <div class="tl-side">
+            <div class="tl-corner">
+              <button class="tbtn autokey" id="autoKey" title="Auto-key: changing the device at the playhead records a keyframe">
+                <svg><use href="#i-key"/></svg>Auto-key
+              </button>
+              <button class="icon-btn sm" id="clearAnim" title="Delete all keyframes"><svg><use href="#i-trash"/></svg></button>
+            </div>
+            <div class="tl-heads" id="tlHeads"></div>
+          </div>
+          <div class="tl-main" id="tlMain">
+            <div class="tl-ruler" id="tlRuler"></div>
+            <div class="tl-tracks" id="tlTracks"></div>
+            <div class="tl-playhead" id="tlPlayhead"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-body" data-tab="motion" hidden>
+        <div class="preset-side" id="motionTarget" title="Which devices a motion preset is applied to">
+          <span class="ps-label">Apply to</span>
+          <button data-v="one" title="Only the selected device">Selected</button>
+          <button data-v="all" title="Every device — one-shot motions start one after another">All devices</button>
+        </div>
+        <div class="presets" id="motionPresets"></div>
+      </div>
+
+      <div class="tab-body" data-tab="angles" hidden>
+        <div class="presets" id="presets"></div>
+      </div>
+
+      <div class="tab-body" data-tab="templates" hidden>
+        <div class="presets" id="templatePresets"></div>
+      </div>
+    </section>
+
+    <!-- ======================= Inspector ======================= -->
+    <aside class="pane pane-inspector">
+      <div class="pane-head"><span>Inspector</span><span class="ph-hint" id="keyState"></span></div>
+      <div class="pane-body">
+        <details class="section" open id="modelSetup" hidden>
+          <summary><svg class="chev"><use href="#i-chev"/></svg>Model setup</summary>
+          <div class="field"><span>Name</span><input class="text-input" id="modelName" maxlength="60" spellcheck="false"></div>
+          <div class="field"><span>Screen</span><span class="screen-state" id="screenState"></span></div>
+          <div class="btn-row">
+            <button class="tbtn" id="pickScreen" title="Click the screen on the model">Pick screen</button>
+            <button class="tbtn" id="pickHide" title="Click parts to hide them (e.g. a glass layer covering the screen)">Hide parts</button>
+            <button class="tbtn" id="showAll" title="Show all hidden parts">Show all</button>
+          </div>
+          <div class="field"><span>Rotate</span>
+            <div class="btn-row">
+              <button class="tbtn" data-axis="0" title="Rotate the model 90° around X">X 90°</button>
+              <button class="tbtn" data-axis="1" title="Rotate the model 90° around Y">Y 90°</button>
+              <button class="tbtn" data-axis="2" title="Rotate the model 90° around Z">Z 90°</button>
+              <button class="icon-btn sm" id="resetFix" title="Reset rotation"><svg><use href="#i-reset"/></svg></button>
+            </div>
+          </div>
+          <div class="model-hint" id="modelHint"></div>
+          <button class="tbtn danger" id="removeModel"><svg><use href="#i-trash"/></svg>Remove model</button>
+        </details>
+
+        <details class="section" open>
+          <summary>
+            <svg class="chev"><use href="#i-chev"/></svg>Transform
+            <button class="icon-btn sm key-btn" id="keyBtn" title="Add / remove keyframe at playhead (K)"><svg><use href="#i-key-o"/></svg></button>
+            <button class="icon-btn sm" id="resetRot" title="Reset angle (R)"><svg><use href="#i-reset"/></svg></button>
+          </summary>
+          <div class="align-row" id="alignRow">
+            <div class="seg">
+              <button data-align="left" title="Align left edge to the canvas"><svg><use href="#i-al-left"/></svg></button>
+              <button data-align="hcenter" title="Centre horizontally on the canvas"><svg><use href="#i-al-hcenter"/></svg></button>
+              <button data-align="right" title="Align right edge to the canvas"><svg><use href="#i-al-right"/></svg></button>
+            </div>
+            <div class="seg">
+              <button data-align="top" title="Align top edge to the canvas"><svg><use href="#i-al-top"/></svg></button>
+              <button data-align="vcenter" title="Centre vertically on the canvas"><svg><use href="#i-al-vcenter"/></svg></button>
+              <button data-align="bottom" title="Align bottom edge to the canvas"><svg><use href="#i-al-bottom"/></svg></button>
+            </div>
+          </div>
+          <div class="param"><label>Tilt</label><span class="hot" id="rotXv"></span><input type="range" id="rotX" min="-180" max="180" step="1"></div>
+          <div class="param"><label>Turn</label><span class="hot" id="rotYv"></span><input type="range" id="rotY" min="-180" max="180" step="1"></div>
+          <div class="param"><label>Roll</label><span class="hot" id="rotZv"></span><input type="range" id="rotZ" min="-180" max="180" step="1"></div>
+          <div class="param"><label>Position X</label><span class="hot" id="posXv"></span><input type="range" id="posX" min="-8" max="8" step="0.01"></div>
+          <div class="param"><label>Position Y</label><span class="hot" id="posYv"></span><input type="range" id="posY" min="-8" max="8" step="0.01"></div>
+          <div class="param"><label>Depth</label><span class="hot" id="posZv" title="Towards (+) or away from (−) the camera"></span><input type="range" id="posZ" min="-6" max="3" step="0.01"></div>
+          <div class="param"><label>Scale</label><span class="hot" id="scalev"></span><input type="range" id="scale" min="0.2" max="3" step="0.01"></div>
+        </details>
+
+        <details class="section" open>
+          <summary>
+            <svg class="chev"><use href="#i-chev"/></svg>Camera
+            <button class="icon-btn sm key-btn" id="camKeyBtn" title="Add / remove camera keyframe at playhead"><svg><use href="#i-key-o"/></svg></button>
+            <button class="icon-btn sm" id="fitAllBtn" title="Frame all devices"><svg><use href="#i-fit"/></svg></button>
+          </summary>
+          <div class="param"><label>Focal length</label><span class="hot" id="fovv"></span><input type="range" id="fov" min="5" max="60" step="0.5"></div>
+          <div class="param"><label>Zoom</label><span class="hot" id="zoomv"></span><input type="range" id="zoom" min="0.1" max="3" step="0.01"></div>
+          <div class="param"><label>Pan X</label><span class="hot" id="panXv"></span><input type="range" id="panX" min="-8" max="8" step="0.01"></div>
+          <div class="param"><label>Pan Y</label><span class="hot" id="panYv"></span><input type="range" id="panY" min="-8" max="8" step="0.01"></div>
+          <div class="param"><label>Orbit</label><span class="hot" id="camOrbitv" title="Swing the camera around the scene. Option-drag in the viewer to orbit. Double-click the slider to reset."></span><input type="range" id="camOrbit" min="-180" max="180" step="1"></div>
+          <div class="param"><label>Elevation</label><span class="hot" id="camElevv" title="Raise the camera to look down (+) or lower it to look up (−). Double-click the slider to reset."></span><input type="range" id="camElev" min="-90" max="90" step="1"></div>
+          <div class="param"><label>Roll</label><span class="hot" id="camRollv" title="Tilt the whole frame. Double-click the slider to reset."></span><input type="range" id="camRoll" min="-180" max="180" step="1"></div>
+        </details>
+
+        <details class="section" open>
+          <summary><svg class="chev"><use href="#i-chev"/></svg>Device</summary>
+          <div class="swatches" id="swatches"></div>
+          <div class="finish-name" id="finishName"></div>
+          <div class="param"><label>Glare</label><span class="hot" id="glarev" title="How strongly the glass reflects the environment, seen straight on (real glass ≈ 4%). Reflections get stronger at steep angles. Turn the environment's Rotation to move them."></span><input type="range" id="glare" min="0" max="0.5" step="0.01"></div>
+          <label class="toggle" id="islandRow"><span>Dynamic Island</span><input type="checkbox" id="island"><i></i></label>
+          <label class="toggle" id="logoRow"><span>Logo</span><input type="checkbox" id="logo"><i></i></label>
+        </details>
+
+        <details class="section" open>
+          <summary><svg class="chev"><use href="#i-chev"/></svg>Environment</summary>
+          <div class="env-list" id="envList"></div>
+          <input type="file" id="hdriInput" accept=".exr,.hdr" hidden>
+          <div class="param"><label>Rotation</label><span class="hot" id="envRotv"></span><input type="range" id="envRot" min="0" max="360" step="1"></div>
+          <div class="param"><label>Reflection zoom</label><span class="hot" id="reflZoomv" title="How magnified the glass reflection is. Lower shows more of the environment, higher zooms into it. It stays the same whatever the focal length and zoom. Double-click the slider to reset."></span><input type="range" id="reflZoom" min="0.25" max="4" step="0.01"></div>
+          <div class="param"><label>Temperature</label><span class="hot" id="envTempv" title="6500 K = original colours"></span><input type="range" id="envTemp" class="kelvin" min="2500" max="12000" step="50"></div>
+          <div class="param"><label>Intensity</label><span class="hot" id="lightv" title="How brightly the environment lights the device (the background isn't affected)"></span><input type="range" id="light" min="0" max="3" step="0.05"></div>
+          <div class="param"><label>Highlights</label><span class="hot" id="envHighlightsv" title="How bright the HDRI's brightest parts (softboxes, windows) stay: 100% = untouched, lower = less white glare without darkening everything. Double-click the slider to reset."></span><input type="range" id="envHighlights" min="0" max="1" step="0.01"></div>
+          <div class="param"><label>Contrast</label><span class="hot" id="envContrastv" title="Below 100% = softer, flatter light; above = punchier. Double-click the slider to reset."></span><input type="range" id="envContrast" min="0.5" max="1.5" step="0.01"></div>
+        </details>
+
+        <details class="section" open>
+          <summary><svg class="chev"><use href="#i-chev"/></svg>Shadow</summary>
+          <div class="field"><span>Type</span>
+            <div class="chips" id="shadowSeg" title="Floor: a shadow on the ground under the devices. Backdrop: on a wall just behind them.">
+              <button data-v="off">Off</button>
+              <button data-v="floor">Floor</button>
+              <button data-v="backdrop">Backdrop</button>
+            </div>
+          </div>
+          <div id="shadowControls">
+            <label class="toggle" id="castShadowRow" title="Turn the shadow off for some devices: select them (⌘-click or Shift-click them on the canvas or in the Scene list) and untick this"><span id="castShadowLabel">Cast by this device</span><input type="checkbox" id="castShadow"><i></i></label>
+            <div class="field"><span>Colour</span>
+              <div class="colors">
+                <label class="color-chip" title="Shadow colour · double-click for black"><input type="color" id="shadowColor"><i></i></label>
+              </div>
+            </div>
+            <div class="param"><label>Strength</label><span class="hot" id="shadowStrengthv"></span><input type="range" id="shadowStrength" min="0" max="1" step="0.01"></div>
+            <div class="param"><label>Softness</label><span class="hot" id="shadowSoftnessv"></span><input type="range" id="shadowSoftness" min="0" max="1" step="0.01"></div>
+            <div class="param"><label>Distance</label><span class="hot" id="shadowDistancev" title="Gap between the devices and the floor or backdrop: further = a bigger, more offset shadow"></span><input type="range" id="shadowDistance" min="0" max="3" step="0.01"></div>
+            <div class="param"><label>Offset</label><span class="hot" id="shadowOffsetv" title="How far the shadow shifts away from the devices: 0% = directly behind (or under) them, a soft halo with some Softness and Distance"></span><input type="range" id="shadowOffset" min="0" max="1" step="0.01"></div>
+            <div class="param"><label>Light angle</label><span class="hot" id="shadowAnglev" title="Which way the shadow shifts, as seen through the camera: 0° = light from above (shadow below), negative = light from the left"></span><input type="range" id="shadowAngle" min="-180" max="180" step="1"></div>
+            <div class="model-hint" id="shadowHint"></div>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary><svg class="chev"><use href="#i-chev"/></svg>Output</summary>
+          <div class="field"><span>Frame</span>
+            <div class="chips wrap" id="frameSeg">
+              <button data-v="viewport">Viewport</button>
+              <button data-v="9:16">9:16</button>
+              <button data-v="16:9">16:9</button>
+              <button data-v="1:1">1:1</button>
+              <button data-v="4:5">4:5</button>
+              <button data-v="custom">Custom</button>
+            </div>
+          </div>
+          <div class="field" id="customRow"><span>Canvas</span>
+            <div class="dims">
+              <input type="number" id="canvasW" min="16" max="8192" step="1" aria-label="Canvas width in pixels">
+              <span class="x">×</span>
+              <input type="number" id="canvasH" min="16" max="8192" step="1" aria-label="Canvas height in pixels">
+              <span class="unit">px</span>
+              <button class="icon-btn sm" id="swapDims" title="Swap width and height"><svg><use href="#i-swap"/></svg></button>
+            </div>
+          </div>
+          <div class="field" id="sizeRow"><span>Size</span><div class="chips" id="sizeSeg"></div></div>
+          <div class="field" id="fpsRow"><span>Frame rate</span>
+            <div class="fps-pick" title="Frames per second, for the MP4 and the timeline's timecode">
+              <select id="fpsSelect" aria-label="Frame rate"></select>
+              <input type="number" id="fpsCustom" min="1" max="240" step="1" aria-label="Custom frame rate" hidden>
+              <span class="tc-unit">fps</span>
+            </div>
+          </div>
+          <div class="field"><span>Background</span>
+            <div class="chips wrap" id="bgModeSeg">
+              <button data-v="transparent">None</button>
+              <button data-v="solid">Solid</button>
+              <button data-v="gradient">Gradient</button>
+              <button data-v="hdri">HDRI</button>
+            </div>
+          </div>
+          <div class="param" id="bgFocusRow"><label>Background focus</label><span class="hot" id="bgFocusv" title="100% = sharpest"></span><input type="range" id="bgFocus" min="0" max="1" step="0.01"></div>
+          <div class="field" id="bgColors"><span>Colours</span>
+            <div class="colors">
+              <label class="color-chip"><input type="color" id="bgC1"><i></i></label>
+              <label class="color-chip" id="bgC2Wrap"><input type="color" id="bgC2"><i></i></label>
+              <span class="hot" id="bgAnglev" title="Gradient angle"></span>
+            </div>
+          </div>
+          <div class="field" id="qualityRow"><span>Quality</span>
+            <div class="chips" id="qualitySeg">
+              <button data-v="standard">Standard</button>
+              <button data-v="high">High</button>
+            </div>
+          </div>
+          <div class="field" id="grainRow"><span>Dithering</span>
+            <div class="chips wrap" id="grainSeg" title="Faint noise that stops smooth gradients banding in the video. Off = cleanest, but gradients may show steps; stronger = smoother gradients, more visible noise.">
+              <button data-v="off">Off</button>
+              <button data-v="light">Light</button>
+              <button data-v="medium">Medium</button>
+              <button data-v="strong">Strong</button>
+            </div>
+          </div>
+          <div class="field"><span>Anti-alias</span>
+            <div class="chips" id="aaSeg" title="Render exports larger and scale them down for smoother edges">
+              <button data-v="1">Off</button>
+              <button data-v="2">2×</button>
+              <button data-v="4">4×</button>
+            </div>
+          </div>
+          <label class="toggle" id="trimRow"><span>Trim empty space</span><input type="checkbox" id="trim"><i></i></label>
+          <div class="out-grid">
+            <span>Format</span><span class="mono" id="outFormat"></span>
+            <span>Size</span><span class="mono" id="exportSize"></span>
+          </div>
+        </details>
+      </div>
+    </aside>
+
+    <!-- ======================= Status bar ======================= -->
+    <footer class="statusbar">
+      <span class="dot" id="statusDot"></span>
+      <span id="status">Loading…</span>
+      <span class="sb-update" id="updateNote" hidden>
+        <a target="_blank" rel="noopener"><span id="updateText"></span></a>
+        <button type="button" aria-label="Dismiss">×</button>
+      </span>
+      <span class="sb-right mono">
+        <span><kbd>Space</kbd> Play</span>
+        <span><kbd>K</kbd> Key</span>
+        <span><kbd>J</kbd><kbd>L</kbd> Prev/next key</span>
+        <span><kbd>E</kbd> Export</span>
+        <span><kbd>⌘Z</kbd> Undo</span>
+        <span id="fps">-- fps</span>
+      </span>
+    </footer>
+  </div>
+
+  <div class="ease-pop" id="easePop" hidden></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

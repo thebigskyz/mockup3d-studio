@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Mockup3D Studio app icon: the Bauhaus mark (a phone with a hard depth
+       block, in front of a sun and a hill) on a paper-coloured rounded
+       square, with a transparent margin as macOS app icons have. The mark
+       is drawn in a 100-unit square; see the brand board for its colours. -->
+  <rect x="50" y="50" width="412" height="412" rx="92" fill="#EFE7D9"/>
+  <g transform="translate(95.8 78) scale(3.56)">
+    <circle cx="66" cy="36" r="24" fill="#E0483B"/>
+    <path d="M0 88a30 30 0 0 1 60 0z" fill="#F3C343"/>
+    <rect x="36" y="22" width="34" height="66" rx="5.5" fill="#151515"/>
+    <rect x="30" y="16" width="34" height="66" rx="5.5" fill="#2F69AE"/>
+    <rect x="41.2" y="20.5" width="11.6" height="4" rx="2" fill="#EFE7D9"/>
+  </g>
+</svg>
