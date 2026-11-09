@@ -212,6 +212,7 @@ The **Scene** list in the Media Pool shows the devices in the scene (up to 12).
 
 - **Focal length** changes the perspective. A long lens looks flatter, a short one more dramatic.
 - **Zoom** and **Pan X / Y** frame the shot. Pan moves across and up the screen, whichever way the camera faces.
+  - Zoom goes from 10% to 1000%. It moves the camera in, and once the camera reaches the nearest device it stops just in front of it and magnifies instead, so you can zoom right into a detail without going through the device.
 - **Orbit** swings the camera around the scene, **Elevation** raises it to look down (or lowers it to look up), and **Roll** tilts the whole frame. Double-click a slider to straighten it. Option-drag (Alt-drag) in the viewer orbits the camera: across for Orbit, up and down for Elevation.
   - Orbiting the camera turns every device at once, and the lighting and reflections stay put in the room, as with a real camera. To turn one device, use its Transform instead.
   - Angles and Transform rotations stay relative to the room, so **Front** faces the camera only when Orbit and Elevation are 0°.

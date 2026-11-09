@@ -423,7 +423,7 @@ export function createScene(container) {
     const p = new THREE.Vector3(pos[0], pos[1], pos[2] || 0).multiplyScalar(unit);
     const dir = camera.getWorldDirection(new THREE.Vector3());
     const d = Math.max(p.clone().sub(camera.position).dot(dir), camera.near);
-    const h = 2 * d * Math.tan((camera.fov * DEG) / 2);
+    const h = (2 * d * Math.tan((camera.fov * DEG) / 2)) / camera.zoom;
     const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
     p.addScaledVector(right, (dx * h * camera.aspect) / 2).addScaledVector(up, (dy * h) / 2).divideScalar(unit);
@@ -521,13 +521,42 @@ export function createScene(container) {
     // Pan slides the camera across its own view; the orbit swings it around
     // the scene's centre. With no orbit this is a camera straight down -z.
     const q = orbitQuat();
-    const target = new THREE.Vector3(cam.pan[0] * unit, cam.pan[1] * unit, 0).applyQuaternion(q);
-    camera.position.copy(target).add(new THREE.Vector3(0, 0, dist).applyQuaternion(q));
+    aim.target.set(cam.pan[0] * unit, cam.pan[1] * unit, 0).applyQuaternion(q);
+    aim.back.set(0, 0, 1).applyQuaternion(q);
+    aim.dist = dist;
     camera.quaternion.copy(q);
-    camera.near = Math.max(dist / 100, 0.001);
+    placeCamera();
+    camera.near = Math.max(camera.position.distanceTo(aim.target) / 100, 0.001);
     camera.far = dist + unit * 40;
     camera.updateProjectionMatrix();
     updateReflectionSpread(fit);
+  }
+
+  // Zoom moves the camera towards the pan point, but never into the
+  // devices: once it would reach the nearest one it stops just in front of
+  // it and magnifies the lens instead, so zooming in keeps going and the
+  // framing at the pan point is the same either way. Run before each render,
+  // as devices move.
+  const aim = { target: new THREE.Vector3(), back: new THREE.Vector3(0, 0, 1), dist: 1 };
+  const aimCentre = new THREE.Vector3();
+  const aimScale = new THREE.Vector3();
+  function placeCamera() {
+    let front = -Infinity; // how far the nearest device reaches towards the camera
+    for (const s of slots.values()) {
+      if (!s.root) continue;
+      s.pivot.updateMatrixWorld(true);
+      s.pivot.getWorldPosition(aimCentre);
+      s.pivot.getWorldScale(aimScale);
+      const r = s.radius * Math.max(aimScale.x, aimScale.y, aimScale.z);
+      front = Math.max(front, aimCentre.sub(aim.target).dot(aim.back) + r);
+    }
+    const dist = Math.max(aim.dist, front + unit * 0.3);
+    const zoom = dist / aim.dist;
+    camera.position.copy(aim.target).addScaledVector(aim.back, dist);
+    if (Math.abs(zoom - camera.zoom) > 1e-9) {
+      camera.zoom = zoom;
+      camera.updateProjectionMatrix();
+    }
   }
 
   // The glass reflection is kept looking as it does with the default lens
@@ -808,6 +837,7 @@ export function createScene(container) {
     out.height = h;
     const g = out.getContext('2d');
     const render = () => {
+      placeCamera();
       updateShadow();
       fitClipPlanes();
       renderer.render(scene, camera);
@@ -922,6 +952,7 @@ export function createScene(container) {
   function loop(now) {
     for (const f of beforeRender) f(now);
     if (!paused) {
+      placeCamera();
       updateShadow();
       fitClipPlanes();
       renderer.render(scene, camera);

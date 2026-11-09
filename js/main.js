@@ -1466,6 +1466,12 @@ const PARAMS = {
     fmt: (v) => `${Math.round(v * 100)}%`,
     step: 0.01,
     parse: (s) => parseFloat(s) / 100,
+    // 10% to 1000%; the slider is a log scale, so 100% is in its middle and
+    // each half doubles or halves at the same rate.
+    min: 0.1,
+    max: 10,
+    slider: (v) => Math.log2(v),
+    fromSlider: (s) => 2 ** s,
   },
   panX: { get: () => liveCam.pan[0], set: (v) => editCamera((c) => { c.pan[0] = v; }), fmt: (v) => v.toFixed(2), step: 0.01, unbounded: true },
   panY: { get: () => liveCam.pan[1], set: (v) => editCamera((c) => { c.pan[1] = v; }), fmt: (v) => v.toFixed(2), step: 0.01, unbounded: true },
@@ -1767,7 +1773,7 @@ function buildControls() {
 
   // Sliders + scrubbable values
   for (const id of Object.keys(PARAMS)) {
-    if ($(id)) $(id).addEventListener('input', (e) => setParam(id, +e.target.value));
+    if ($(id)) $(id).addEventListener('input', (e) => setParam(id, PARAMS[id].fromSlider ? PARAMS[id].fromSlider(+e.target.value) : +e.target.value));
     if ($(id + 'v')) makeHot($(id + 'v'), id);
   }
 
