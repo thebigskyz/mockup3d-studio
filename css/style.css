@@ -774,6 +774,10 @@ input[type=range]::-moz-range-thumb {
 .tbtn svg { width: 14px; height: 14px; }
 .tbtn:hover { color: var(--text); border-color: var(--bg4); }
 .tbtn.on { color: var(--hot); border-color: rgba(84,166,255,.45); background: rgba(84,166,255,.1); }
+/* Mirror (bottom panel header): flips the preset thumbnails with the presets. */
+.mirror-btn { height: 22px; padding: 0 8px; text-transform: none; letter-spacing: 0; font-weight: 500; flex: none; }
+.pane-bottom.mirrored .presets .p-stage,
+.pane-bottom.mirrored .presets .t-box { transform: scaleX(-1); }
 
 /* =====================================================================
    Angle presets strip

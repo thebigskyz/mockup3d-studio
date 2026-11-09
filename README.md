@@ -192,6 +192,7 @@ The **Scene** list in the Media Pool shows the devices in the scene (up to 12).
 - **Rotate:** drag the device in the viewer.
 - **Move:** **Shift-drag** the device. It moves across the screen, whichever way the camera is orbited.
 - **Angles** tab: one click sets a ready-made angle on the selected device: Front, Left, Right, Hero, Lean back, Tabletop, Isometric, Float, Side or Back. **R** resets the angle.
+- **Mirror** (right of the Motion presets, Angles and Templates tabs): flips them left to right, so Hero turns the other way, Slide in comes from the right and Turntable spins the other way. A mirrored template also puts its devices on the other sides and mirrors its camera, lighting and gradient. The cards flip too, so they show what you'll get. It stays on until you turn it off.
 - **Transform** (Inspector): exact values for Tilt / Turn / Roll, Position X / Y, **Depth** (towards or away from the camera) and **Scale**.
 - **Align:** the buttons at the top of Transform line the selected device up with the canvas: left, centre or right edge, and top, middle or bottom edge. They use the device's actual outline on screen, so a tilted device's corner touches the edge. They only change the device's position, so they key like any other move.
 - **Templates** tab: complete scenes to start from, all on a white background (change it in Output › Background). Each one sets the devices and their models, poses and finish, the camera angle and lens, the frame shape, the background and the shadow, and sometimes the lighting rotation.
@@ -280,6 +281,7 @@ The Environment section chooses what lights the device and shows in its reflecti
 - Applying one replaces the device's keyframes and fits them to the current duration.
 - Moves start from where the device is, so they work with any arrangement.
 - **Apply to: All devices** applies the preset to every device. One-shot moves (such as Drop in) then start one after another.
+- **Mirror** flips the move left to right (see Posing and arranging).
 
 **Timeline** tab: there's a **Camera** track, then a track per device with its design underneath. Tracks show keyframes (◆). Between keyframes are segments labelled with their easing.
 

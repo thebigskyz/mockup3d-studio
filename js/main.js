@@ -8,7 +8,7 @@ import { easeCss } from './easing.js';
 import {
   DEFAULT_POSE, CAMERA, devicePose, cameraPose, createAnim, reviveAnim, migrateLegacyAnim, trackView,
   evaluate, hasKeys, anyKeys, anyAnimated, allKeysView, keyAt, setKey, removeKey, setDuration,
-  prevKeyTime, nextKeyTime, snapTime, MOTION_PRESETS, applyPreset, FPS_PRESETS, clampFps,
+  prevKeyTime, nextKeyTime, snapTime, MOTION_PRESETS, applyPreset, FPS_PRESETS, clampFps, mirrorRot,
 } from './timeline.js';
 import { createTimelineUI } from './timeline-ui.js';
 import { TEMPLATES } from './templates.js';
@@ -97,6 +97,7 @@ function freshDefaults() {
     bottomH: 220,
     bottomTab: 'timeline',
     motionTarget: 'one', // motion presets apply to the selected device ('one') or all of them
+    mirror: false, // motion presets, angles and templates are flipped left to right
     output: { ...DEFAULT_OUTPUT },
     env: DEFAULT_ENV,
     // The studio look new scenes start with: softboxes turned a little,
@@ -247,7 +248,7 @@ function saveSoon() {
 // slider, scrubbing a value) are grouped because saving is debounced.
 // ---------------------------------------------------------------------------
 // View-only settings that shouldn't be undone.
-const NOT_UNDOABLE = ['anim', 'selected', 'motionTarget', 'bottomH', 'bottomTab', 'viewerBg', 'autoKey', 'customDevices'];
+const NOT_UNDOABLE = ['anim', 'selected', 'motionTarget', 'mirror', 'bottomH', 'bottomTab', 'viewerBg', 'autoKey', 'customDevices'];
 const HISTORY_LIMIT = 150;
 const history = { undo: [], redo: [], last: null };
 let restoring = false;
@@ -1724,7 +1725,7 @@ function buildControls() {
     b.className = 'preset';
     b.innerHTML = `<div class="p-stage"><div class="mini"><div class="face front"></div><div class="face back"></div></div></div><span>${p.label}</span>`;
     b.querySelector('.mini').style.transform = cssRotation(p.rot);
-    b.addEventListener('click', () => animateTo(p.rot));
+    b.addEventListener('click', () => animateTo(state.mirror ? mirrorRot(p.rot) : p.rot));
     b._rot = p.rot;
     $('presets').appendChild(b);
   }
@@ -1964,6 +1965,14 @@ function buildMotionPresets() {
   style.textContent = css;
   document.head.appendChild(style);
 
+  $('mirrorBtn').addEventListener('click', () => {
+    state.mirror = !state.mirror;
+    save();
+    syncControls();
+    syncAnglePresetsActive();
+    setStatus(state.mirror ? 'Mirrored: presets, angles and templates are flipped left to right' : 'Mirror off');
+  });
+
   for (const b of $('motionTarget').querySelectorAll('button[data-v]')) {
     b.addEventListener('click', () => {
       state.motionTarget = b.dataset.v;
@@ -1985,7 +1994,7 @@ function applyMotion(preset) {
   const span = stagger ? anim.duration * 0.7 : anim.duration;
   targets.forEach((rec, i) => {
     const start = stagger ? (anim.duration - span) * (i / (n - 1)) : 0;
-    applyPreset(trackOf(rec.id), preset.id, instOf(rec.id).live, { start, span, reach: Math.max(1, 1 / liveCam.zoom) });
+    applyPreset(trackOf(rec.id), preset.id, instOf(rec.id).live, { start, span, reach: Math.max(1, 1 / liveCam.zoom), mirror: state.mirror });
   });
   anim.loop = preset.loop;
   timelineUI.select(null);
@@ -1994,9 +2003,10 @@ function applyMotion(preset) {
   play(true);
   save();
   const keys = trackOf(targets[0].id).keyframes.length;
+  const label = state.mirror ? `${preset.label} (mirrored)` : preset.label;
   setStatus(all
-    ? `${preset.label} applied to ${n} devices${stagger ? ', one after another' : ''}`
-    : `${preset.label} applied — ${keys} keyframes over ${anim.duration.toFixed(1)}s`);
+    ? `${label} applied to ${n} devices${stagger ? ', one after another' : ''}`
+    : `${label} applied — ${keys} keyframes over ${anim.duration.toFixed(1)}s`);
 }
 
 /** Camera → Frame all: zoom and pan so every device is in view. */
@@ -2086,7 +2096,27 @@ function buildTemplatePresets() {
  * designs; any without one show the scene's designs in turn, so a grid of
  * phones fills up from one screenshot. Keyframes are cleared. One undo step.
  */
+/**
+ * A template flipped left to right: devices swap sides and turn the other
+ * way, and so do the camera, the lighting and a gradient background.
+ */
+function mirrorTemplate(t) {
+  return {
+    ...t,
+    label: `${t.label} (mirrored)`,
+    devices: t.devices.map((d) => ({ ...d, rot: mirrorRot(d.rot), pos: [-d.pos[0], d.pos[1], d.pos[2] || 0] })),
+    camera: {
+      ...t.camera,
+      orbit: [-t.camera.orbit[0], t.camera.orbit[1], -t.camera.orbit[2]],
+      ...(t.camera.pan ? { pan: [-t.camera.pan[0], t.camera.pan[1]] } : {}),
+    },
+    bg: { ...t.bg, angle: (360 - (t.bg.angle || 0)) % 360 },
+    ...(Number.isFinite(t.envRot) ? { envRot: (360 - t.envRot) % 360 } : {}),
+  };
+}
+
 async function applyTemplate(t) {
+  if (state.mirror) t = mirrorTemplate(t);
   if (playing) play(false);
   setPickMode(null);
   multi.clear();
@@ -2880,7 +2910,8 @@ function syncAnglePresetsActive() {
   const close = (a, b) => Math.abs(wrap180(a - b)) < 0.5;
   const rot = sel().live.rot;
   for (const b of $('presets').children) {
-    b.classList.toggle('on', b._rot.every((r, i) => close(r, rot[i])));
+    const want = state.mirror ? mirrorRot(b._rot) : b._rot;
+    b.classList.toggle('on', want.every((r, i) => close(r, rot[i])));
   }
 }
 
@@ -2903,6 +2934,10 @@ function syncControls() {
     angles: hasKeys(trackOf(state.selected)) && state.autoKey ? 'Click to key this angle at the playhead' : 'Click to animate to an angle',
     templates: 'Replaces the scene: devices, camera, frame and background · your designs are kept · ⌘Z to undo',
   }[state.bottomTab];
+  $('mirrorBtn').hidden = state.bottomTab === 'timeline';
+  $('mirrorBtn').classList.toggle('on', !!state.mirror);
+  $('mirrorBtn').setAttribute('aria-pressed', String(!!state.mirror));
+  $('bottomPane').classList.toggle('mirrored', !!state.mirror);
   const many = state.devices.length > 1;
   $('motionTarget').hidden = !many;
   on('motionTarget', (v) => v === (many ? state.motionTarget || 'one' : 'one'));

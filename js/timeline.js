@@ -229,6 +229,12 @@ export function nextKeyTime(anim, t) {
   return k ? k.t : anim.duration;
 }
 
+/**
+ * A rotation (degrees, the devices' X/Y/Z order) seen in a mirror, flipped
+ * left to right: tilt stays, turn and roll go the other way.
+ */
+export const mirrorRot = ([x, y, z]) => [x, y ? -y : 0, z ? -z : 0];
+
 // ---------------------------------------------------------------------------
 // Motion presets. Times are fractions of the duration; poses are partial and
 // relative to the device's own position and size.
@@ -332,8 +338,9 @@ export const MOTION_PRESETS = [
  * its zoom scales the device. `start` / `span` (seconds) place the motion
  * within the timeline, e.g. to stagger several devices. `reach` scales the
  * movement (e.g. with the camera zoomed out, so off-screen starts stay off-screen).
+ * `mirror` flips the motion left to right.
  */
-export function applyPreset(track, presetId, basePose, { start = 0, span = track.duration, reach = 1 } = {}) {
+export function applyPreset(track, presetId, basePose, { start = 0, span = track.duration, reach = 1, mirror = false } = {}) {
   const preset = MOTION_PRESETS.find((p) => p.id === presetId);
   if (!preset) return null;
   const base = devicePose(basePose);
@@ -341,8 +348,8 @@ export function applyPreset(track, presetId, basePose, { start = 0, span = track
     id: newId(),
     t: Math.round((start + k.t * span) * track.fps) / track.fps,
     pose: devicePose({
-      rot: k.pose.rot,
-      pos: [base.pos[0] + (k.pose.pos?.[0] || 0) * reach, base.pos[1] + (k.pose.pos?.[1] || 0) * reach, base.pos[2]],
+      rot: mirror ? mirrorRot(k.pose.rot) : k.pose.rot,
+      pos: [base.pos[0] + (k.pose.pos?.[0] || 0) * reach * (mirror ? -1 : 1), base.pos[1] + (k.pose.pos?.[1] || 0) * reach, base.pos[2]],
       scale: base.scale * (k.pose.zoom ?? 1),
     }),
     ease: k.ease || 'easeInOut',
