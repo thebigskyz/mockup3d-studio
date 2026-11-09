@@ -255,12 +255,15 @@ export function createTimelineUI(opts) {
   });
 
   // ---- easing editor (a curve of points with handles + presets) ----------
-  // Drag a point or its yellow handles. Double-click the line to add a
-  // point, double-click a point to remove it. A point's two handles stay in
-  // line (a smooth curve) unless you Alt-drag one.
+  // Works like Figma's vector editing: click the line to add a point (and
+  // drag to place it), click a point to select it and show its handles,
+  // Delete or Backspace removes the selected point. A point's two handles
+  // stay in line (a smooth curve) unless you Alt-drag one. Up to three
+  // points between the two ends.
   let popIndex = -1;
   let popTrack = null;
   let popAnim = 0;
+  let selPt = -1; // the point whose handles show (-1: none)
   const U = 200;      // pixels per unit on the graph
   const P = 18;       // padding
   const Y_TOP = 1.3;  // visible value range: -0.3 .. 1.3
@@ -271,12 +274,14 @@ export function createTimelineUI(opts) {
   const gy = (y) => P + (Y_TOP - y) * U;
   const clampY = (y) => Math.min(Y_TOP, Math.max(Y_BOT, y));
   const MIN_GAP = 0.01; // points stay at least this far apart in time
+  const MAX_INNER = 3;  // points allowed between the two ends
 
   function openPop(seg, trackId, i) {
     const key = view(trackId).keyframes[i];
     if (!key) return;
     popIndex = i;
     popTrack = trackId;
+    selPt = -1;
     pop.innerHTML = `
       <div class="ep-editor">
         <div class="ep-title">Easing curve <span class="ep-name" data-name></span></div>
@@ -287,6 +292,7 @@ export function createTimelineUI(opts) {
           <path class="ep-curve" data-curve/>
           <path class="ep-hit" data-hit/>
           <g data-points></g>
+          <circle class="ep-ghost" data-ghost r="4.5" visibility="hidden"/>
           <circle class="ep-dot" data-dot r="4"/>
           <text class="ep-axis" x="${gx(0)}" y="${GH - 4}">time →</text>
           <text class="ep-axis" x="${gx(0) - 4}" y="${gy(1) - 6}">value</text>
@@ -294,7 +300,7 @@ export function createTimelineUI(opts) {
         <div class="ep-fields">
           ${['x1', 'y1', 'x2', 'y2'].map((n, j) => `<label><span>${n}</span><input type="number" step="0.01" data-f="${j}"></label>`).join('')}
         </div>
-        <div class="ep-hint">Double-click the line to add a point, double-click a point to remove it. Alt-drag a handle to bend one side only.</div>
+        <div class="ep-hint"></div>
         <div class="ep-preview"><i data-ball></i></div>
       </div>
       <div class="ep-presets">
@@ -313,15 +319,37 @@ export function createTimelineUI(opts) {
       return [((ev.clientX - r.left) * sx - P) / U, Y_TOP - ((ev.clientY - r.top) * sx - P) / U];
     };
 
-    // Drag a point or a handle: x is time, y is value (it can overshoot).
+    // Press on a point or handle to drag it, or on the line to add a point
+    // there and drag it. Pressing empty space deselects.
+    // x is time, y is value (it can overshoot).
     svg.addEventListener('pointerdown', (e) => {
-      const el = e.target.closest('[data-n]');
-      if (!el || e.detail > 1) return;
+      if (e.button !== 0) return;
+      let el = e.target.closest('[data-n]');
+      if (!el && e.target.closest('[data-hit]')) {
+        const pts = pointsOf(key.ease);
+        const [x] = toUnit(e);
+        const n = pts.length - 2 < MAX_INNER && x > MIN_GAP && x < 1 - MIN_GAP ? addPoint(pts, x) : -1;
+        if (n < 0) return;
+        selPt = n;
+        setCurve(key, pts);
+        el = pop.querySelector(`.ep-point[data-n="${n}"]`);
+      }
+      if (!el) {
+        if (selPt !== -1) { selPt = -1; syncEditor(key); }
+        return;
+      }
       e.preventDefault();
       svg.setPointerCapture(e.pointerId);
+      hideGhost();
       const n = +el.dataset.n;
       const side = el.dataset.side; // 'in' / 'out' for a handle, none for the point
+      if (!side && selPt !== n) {
+        selPt = n;
+        syncEditor(key);
+      }
+      const isEnd = n === 0 || n === pointsOf(key.ease).length - 1;
       const move = (ev) => {
+        if (!side && isEnd) return; // the ends stay at 0 and 1
         const [x, y] = toUnit(ev);
         const pts = pointsOf(key.ease);
         if (side) moveHandle(pts, n, side, x, clampY(y), !ev.altKey);
@@ -336,27 +364,19 @@ export function createTimelineUI(opts) {
       svg.addEventListener('pointerup', up);
     });
 
-    // Double-click the line to add a point there (the curve keeps its
-    // shape), or a point to remove it.
-    svg.addEventListener('dblclick', (e) => {
-      // The first click's pointer capture sends this to the graph itself:
-      // look at what's under the pointer.
-      const under = document.elementFromPoint(e.clientX, e.clientY) || e.target;
-      const pt = under.closest('[data-n]');
-      const pts = pointsOf(key.ease);
-      if (pt && !pt.dataset.side) {
-        const n = +pt.dataset.n;
-        if (n === 0 || n === pts.length - 1) return; // the ends stay
-        pts.splice(n, 1);
-        setCurve(key, pts);
-        return;
-      }
-      if (!under.closest('[data-hit]')) return;
+    // Hovering the line shows where a click would add a point.
+    const ghost = pop.querySelector('[data-ghost]');
+    const hideGhost = () => ghost.setAttribute('visibility', 'hidden');
+    svg.addEventListener('pointermove', (e) => {
+      if (svg.hasPointerCapture(e.pointerId) || !e.target.closest('[data-hit]')) return hideGhost();
       const [x] = toUnit(e);
-      if (x <= MIN_GAP || x >= 1 - MIN_GAP) return;
-      addPoint(pts, x);
-      setCurve(key, pts);
+      const full = pointsOf(key.ease).length - 2 >= MAX_INNER;
+      if (full || x <= MIN_GAP || x >= 1 - MIN_GAP) return hideGhost();
+      ghost.setAttribute('cx', gx(x));
+      ghost.setAttribute('cy', gy(clampY(ease(key.ease, x))));
+      ghost.setAttribute('visibility', 'visible');
     });
+    svg.addEventListener('pointerleave', hideGhost);
 
     for (const input of pop.querySelectorAll('[data-f]')) {
       input.addEventListener('input', () => {
@@ -378,6 +398,7 @@ export function createTimelineUI(opts) {
       const b = ev.target.closest('button[data-e]');
       if (!b) return;
       key.ease = b.dataset.e;
+      selPt = -1;
       syncEditor(key);
       render();
       opts.onEdit('ease');
@@ -444,7 +465,7 @@ export function createTimelineUI(opts) {
   function addPoint(pts, x) {
     const i = pts.findIndex((p) => p.x >= x);
     const a = pts[i - 1], b = pts[i];
-    if (x - a.x < MIN_GAP || b.x - x < MIN_GAP) return;
+    if (x - a.x < MIN_GAP || b.x - x < MIN_GAP) return -1;
     const P0 = [a.x, a.y], P1 = a.out, P2 = b.in, P3 = [b.x, b.y];
     const at = (u) => {
       const m = 1 - u;
@@ -463,6 +484,7 @@ export function createTimelineUI(opts) {
     a.out = q0;
     b.in = q2;
     pts.splice(i, 0, { x: s[0], y: s[1], in: r0, out: r1 });
+    return i;
   }
 
   function setCurve(key, pts, { keepFields = false } = {}) {
@@ -486,25 +508,34 @@ export function createTimelineUI(opts) {
 
     // Arms and handles first, so the points sit on top.
     const last = pts.length - 1;
+    const two = pts.length === 2;
+    if (selPt > last) selPt = -1;
     let arms = '', handles = '', dots = '';
     pts.forEach((p, n) => {
       const px = gx(p.x), py = gy(clampY(p.y));
-      for (const side of ['in', 'out']) {
-        const h = p[side];
-        if (!h) continue;
-        const hx = gx(h[0]).toFixed(1), hy = gy(clampY(h[1])).toFixed(1);
-        arms += `<line class="ep-arm" x1="${px}" y1="${py}" x2="${hx}" y2="${hy}"/>`;
-        handles += `<circle class="ep-handle${pts.length > 2 ? ' small' : ''}" data-n="${n}" data-side="${side}" cx="${hx}" cy="${hy}" r="${pts.length > 2 ? 5 : 7}"/>`;
+      if (two || n === selPt) {
+        for (const side of ['in', 'out']) {
+          const h = p[side];
+          if (!h) continue;
+          const hx = gx(h[0]).toFixed(1), hy = gy(clampY(h[1])).toFixed(1);
+          arms += `<line class="ep-arm" x1="${px}" y1="${py}" x2="${hx}" y2="${hy}"/>`;
+          handles += `<circle class="ep-handle${two ? '' : ' small'}" data-n="${n}" data-side="${side}" cx="${hx}" cy="${hy}" r="${two ? 7 : 5.5}"/>`;
+        }
       }
+      // The ends can be clicked to show their handle, but stay where they are.
       dots += n === 0 || n === last
-        ? `<circle class="ep-end" cx="${px}" cy="${py}" r="3.5"/>`
-        : `<rect class="ep-point" data-n="${n}" x="${px - 4.5}" y="${py - 4.5}" width="9" height="9" rx="1.5"><title>Drag to move · double-click to remove</title></rect>`;
+        ? `<circle class="ep-end${two ? '' : ' pick'}${n === selPt ? ' on' : ''}" data-n="${n}" cx="${px}" cy="${py}" r="${two ? 3.5 : 4.5}"/>`
+        : `<rect class="ep-point${n === selPt ? ' on' : ''}" data-n="${n}" x="${px - 4.5}" y="${py - 4.5}" width="9" height="9" rx="1.5"><title>Click to select · drag to move · Delete to remove</title></rect>`;
     });
     pop.querySelector('[data-points]').innerHTML = arms + handles + dots;
 
     pop.querySelector('[data-name]').textContent = easeLabel(key.ease);
-    const two = pts.length === 2;
     pop.querySelector('.ep-fields').hidden = !two;
+    const full = last - 1 >= MAX_INNER;
+    pop.querySelector('.ep-hint').textContent = two
+      ? 'Click the line to add a point.'
+      : `${full ? `Up to ${MAX_INNER} points: delete one to add another.` : 'Click the line to add a point.'} Select a point and press Delete to remove it.`;
+    pop.querySelector('[data-hit]').classList.toggle('full', full);
     if (two && !keepFields) {
       const p = [...pts[0].out, ...pts[1].in];
       pop.querySelectorAll('[data-f]').forEach((input, j) => { input.value = +p[j].toFixed(2); });
@@ -531,11 +562,29 @@ export function createTimelineUI(opts) {
     render();
   }
   document.addEventListener('pointerdown', (e) => {
-    if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('.tl-seg')) closePop();
+    // The path, not the target: clicking a point redraws the graph, which
+    // takes the clicked element out of the popup.
+    if (!pop.hidden && !e.composedPath().includes(pop) && !e.target.closest('.tl-seg')) closePop();
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closePop();
   });
+  // While the easing editor is open, Delete / Backspace remove its selected
+  // point and nothing else: they mustn't reach the timeline or the scene
+  // (which would delete keyframes or the device).
+  window.addEventListener('keydown', (e) => {
+    if (pop.hidden || (e.key !== 'Delete' && e.key !== 'Backspace')) return;
+    if (e.target.closest?.('input, textarea')) return; // editing a number
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const key = popTrack && view(popTrack).keyframes[popIndex];
+    if (!key) return;
+    const pts = pointsOf(key.ease);
+    if (selPt <= 0 || selPt >= pts.length - 1) return; // the ends stay
+    pts.splice(selPt, 1);
+    selPt = -1;
+    setCurve(key, pts);
+  }, true);
 
   /**
    * Select keyframes by id (an id, an array of ids, or null for none) on one

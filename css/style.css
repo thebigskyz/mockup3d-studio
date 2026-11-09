@@ -1173,7 +1173,11 @@ input[type=range]::-moz-range-thumb {
 .ep-handle.small { stroke-width: 1.5; }
 .ep-point { fill: #fff; stroke: #131316; stroke-width: 1.5; cursor: move; }
 .ep-point:hover { fill: var(--hot); }
-.ep-hit { fill: none; stroke: transparent; stroke-width: 12; cursor: copy; }
+.ep-point.on, .ep-end.on { fill: var(--hot); }
+.ep-end.pick { cursor: pointer; stroke: #131316; stroke-width: 1.5; }
+.ep-hit { fill: none; stroke: transparent; stroke-width: 12; cursor: crosshair; }
+.ep-hit.full { cursor: default; }
+.ep-ghost { fill: none; stroke: var(--hot); stroke-width: 1.5; pointer-events: none; }
 .ep-hint { font-size: 10.5px; line-height: 1.35; color: var(--text-faint); }
 .ep-axis { fill: var(--text-faint); font: 9.5px var(--mono); }
 .ep-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }

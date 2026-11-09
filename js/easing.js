@@ -143,7 +143,8 @@ function fitPoints(fn) {
   const xs = [0];
   for (let i = 1; i < N; i++) {
     const a = fn((i - 1) / N), b = fn(i / N), c = fn((i + 1) / N);
-    if ((b - a) * (c - b) < 0) xs.push(i / N);
+    // A point at each peak and dip you can see (not the last tiny ripples).
+    if ((b - a) * (c - b) < 0 && Math.abs(b - 1) > 0.01) xs.push(i / N);
   }
   xs.push(1);
   const at = (x) => ({ x, y: x >= 1 ? 1 : fn(x), d: x >= 1 ? slope(1 - 1e-3) : slope(x) });
@@ -171,7 +172,7 @@ function fitPoints(fn) {
   for (let pass = 0; pass < 4 && pts.length < 16; pass++) {
     const next = [pts[0]];
     for (let i = 1; i < pts.length; i++) {
-      if (fitSeg(pts[i - 1], pts[i]).e > 0.006) next.push(at((pts[i - 1].x + pts[i].x) / 2));
+      if (fitSeg(pts[i - 1], pts[i]).e > 0.03) next.push(at((pts[i - 1].x + pts[i].x) / 2));
       next.push(pts[i]);
     }
     if (next.length === pts.length) break;
