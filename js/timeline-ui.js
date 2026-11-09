@@ -1,7 +1,7 @@
 // Timeline panel: ruler, playhead, and a keyframe track for the camera and
 // for each device (with the device's design underneath).
 
-import { EASINGS, EASING_ORDER, curveSVG, ease, easeLabel, bezierOf, bezierName } from './easing.js';
+import { EASINGS, EASING_ORDER, curveSVG, ease, easeLabel, pointsOf, curveName } from './easing.js';
 import { moveKey, duplicateKey, resolveOverlaps, snapTime, trackView, keyAt } from './timeline.js';
 
 const $ = (id) => document.getElementById(id);
@@ -254,11 +254,14 @@ export function createTimelineUI(opts) {
     openPop(seg, seg.dataset.track, +seg.dataset.i);
   });
 
-  // ---- easing editor (curve with two draggable handles + presets) --------
+  // ---- easing editor (a curve of points with handles + presets) ----------
+  // Drag a point or its yellow handles. Double-click the line to add a
+  // point, double-click a point to remove it. A point's two handles stay in
+  // line (a smooth curve) unless you Alt-drag one.
   let popIndex = -1;
   let popTrack = null;
   let popAnim = 0;
-  const U = 150;      // pixels per unit on the graph
+  const U = 200;      // pixels per unit on the graph
   const P = 18;       // padding
   const Y_TOP = 1.3;  // visible value range: -0.3 .. 1.3
   const Y_BOT = -0.3;
@@ -266,6 +269,8 @@ export function createTimelineUI(opts) {
   const GH = (Y_TOP - Y_BOT) * U + 2 * P;
   const gx = (x) => P + x * U;
   const gy = (y) => P + (Y_TOP - y) * U;
+  const clampY = (y) => Math.min(Y_TOP, Math.max(Y_BOT, y));
+  const MIN_GAP = 0.01; // points stay at least this far apart in time
 
   function openPop(seg, trackId, i) {
     const key = view(trackId).keyframes[i];
@@ -279,17 +284,17 @@ export function createTimelineUI(opts) {
           <rect class="ep-area" x="${gx(0)}" y="${gy(1)}" width="${U}" height="${U}" rx="3"/>
           ${[0.25, 0.5, 0.75].map((v) => `<line class="ep-grid" x1="${gx(v)}" x2="${gx(v)}" y1="${gy(1)}" y2="${gy(0)}"/><line class="ep-grid" x1="${gx(0)}" x2="${gx(1)}" y1="${gy(v)}" y2="${gy(v)}"/>`).join('')}
           <line class="ep-diag" x1="${gx(0)}" y1="${gy(0)}" x2="${gx(1)}" y2="${gy(1)}"/>
-          <line class="ep-arm" data-arm="1"/><line class="ep-arm" data-arm="2"/>
           <path class="ep-curve" data-curve/>
-          <circle class="ep-end" cx="${gx(0)}" cy="${gy(0)}" r="3.5"/><circle class="ep-end" cx="${gx(1)}" cy="${gy(1)}" r="3.5"/>
+          <path class="ep-hit" data-hit/>
+          <g data-points></g>
           <circle class="ep-dot" data-dot r="4"/>
-          <circle class="ep-handle" data-h="1" r="7"/><circle class="ep-handle" data-h="2" r="7"/>
           <text class="ep-axis" x="${gx(0)}" y="${GH - 4}">time →</text>
           <text class="ep-axis" x="${gx(0) - 4}" y="${gy(1) - 6}">value</text>
         </svg>
         <div class="ep-fields">
           ${['x1', 'y1', 'x2', 'y2'].map((n, j) => `<label><span>${n}</span><input type="number" step="0.01" data-f="${j}"></label>`).join('')}
         </div>
+        <div class="ep-hint">Double-click the line to add a point, double-click a point to remove it. Alt-drag a handle to bend one side only.</div>
         <div class="ep-preview"><i data-ball></i></div>
       </div>
       <div class="ep-presets">
@@ -301,38 +306,68 @@ export function createTimelineUI(opts) {
     syncEditor(key);
     render();
 
-    // Drag a handle: x is time (kept within 0..1), y is value (can overshoot).
     const svg = pop.querySelector('.ep-graph');
-    for (const h of pop.querySelectorAll('.ep-handle')) {
-      h.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        h.setPointerCapture(e.pointerId);
-        const which = +h.dataset.h;
-        const move = (ev) => {
-          const r = svg.getBoundingClientRect();
-          const sx = GW / r.width;
-          const x = Math.min(1, Math.max(0, ((ev.clientX - r.left) * sx - P) / U));
-          const y = Math.min(Y_TOP, Math.max(Y_BOT, Y_TOP - ((ev.clientY - r.top) * sx - P) / U));
-          const p = handlesFor(key);
-          if (which === 1) { p[0] = x; p[1] = y; } else { p[2] = x; p[3] = y; }
-          setCurve(key, p);
-        };
-        const up = () => {
-          h.removeEventListener('pointermove', move);
-          h.removeEventListener('pointerup', up);
-        };
-        h.addEventListener('pointermove', move);
-        h.addEventListener('pointerup', up);
-      });
-    }
+    const toUnit = (ev) => {
+      const r = svg.getBoundingClientRect();
+      const sx = GW / r.width;
+      return [((ev.clientX - r.left) * sx - P) / U, Y_TOP - ((ev.clientY - r.top) * sx - P) / U];
+    };
+
+    // Drag a point or a handle: x is time, y is value (it can overshoot).
+    svg.addEventListener('pointerdown', (e) => {
+      const el = e.target.closest('[data-n]');
+      if (!el || e.detail > 1) return;
+      e.preventDefault();
+      svg.setPointerCapture(e.pointerId);
+      const n = +el.dataset.n;
+      const side = el.dataset.side; // 'in' / 'out' for a handle, none for the point
+      const move = (ev) => {
+        const [x, y] = toUnit(ev);
+        const pts = pointsOf(key.ease);
+        if (side) moveHandle(pts, n, side, x, clampY(y), !ev.altKey);
+        else movePoint(pts, n, x, clampY(y));
+        setCurve(key, pts);
+      };
+      const up = () => {
+        svg.removeEventListener('pointermove', move);
+        svg.removeEventListener('pointerup', up);
+      };
+      svg.addEventListener('pointermove', move);
+      svg.addEventListener('pointerup', up);
+    });
+
+    // Double-click the line to add a point there (the curve keeps its
+    // shape), or a point to remove it.
+    svg.addEventListener('dblclick', (e) => {
+      // The first click's pointer capture sends this to the graph itself:
+      // look at what's under the pointer.
+      const under = document.elementFromPoint(e.clientX, e.clientY) || e.target;
+      const pt = under.closest('[data-n]');
+      const pts = pointsOf(key.ease);
+      if (pt && !pt.dataset.side) {
+        const n = +pt.dataset.n;
+        if (n === 0 || n === pts.length - 1) return; // the ends stay
+        pts.splice(n, 1);
+        setCurve(key, pts);
+        return;
+      }
+      if (!under.closest('[data-hit]')) return;
+      const [x] = toUnit(e);
+      if (x <= MIN_GAP || x >= 1 - MIN_GAP) return;
+      addPoint(pts, x);
+      setCurve(key, pts);
+    });
+
     for (const input of pop.querySelectorAll('[data-f]')) {
       input.addEventListener('input', () => {
         const v = parseFloat(input.value);
         if (!Number.isFinite(v)) return;
         const j = +input.dataset.f;
-        const p = handlesFor(key);
-        p[j] = j % 2 === 0 ? Math.min(1, Math.max(0, v)) : Math.min(3, Math.max(-2, v));
-        setCurve(key, p, { keepFields: true });
+        const pts = pointsOf(key.ease);
+        if (pts.length !== 2) return;
+        const h = j < 2 ? pts[0].out : pts[1].in;
+        h[j % 2] = j % 2 === 0 ? Math.min(1, Math.max(0, v)) : Math.min(3, Math.max(-2, v));
+        setCurve(key, pts, { keepFields: true });
       });
       input.addEventListener('keydown', (e) => {
         e.stopPropagation(); // typing here shouldn't trigger app shortcuts
@@ -358,26 +393,88 @@ export function createTimelineUI(opts) {
       const v = ease(key.ease, t);
       const dot = pop.querySelector('[data-dot]');
       dot.setAttribute('cx', gx(t));
-      dot.setAttribute('cy', gy(Math.min(Y_TOP, Math.max(Y_BOT, v))));
+      dot.setAttribute('cy', gy(clampY(v)));
       pop.querySelector('[data-ball]').style.left = `${Math.min(110, Math.max(-10, v * 100))}%`;
       popAnim = requestAnimationFrame(tick);
     };
     popAnim = requestAnimationFrame(tick);
   }
 
-  // Handles to show for an easing: its own, or a sensible start for Hold.
-  const handlesFor = (key) => bezierOf(key.ease) || [0.25, 0.1, 0.25, 1];
+  // Keep every handle within its own segment's time span, so the curve
+  // never runs backwards in time.
+  function tidy(pts) {
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      if (p.in) p.in[0] = Math.min(p.x, Math.max(pts[i - 1].x, p.in[0]));
+      if (p.out) p.out[0] = Math.max(p.x, Math.min(pts[i + 1].x, p.out[0]));
+    }
+  }
 
-  function setCurve(key, p, { keepFields = false } = {}) {
-    key.ease = bezierName(p);
+  function moveHandle(pts, n, side, x, y, smooth) {
+    const p = pts[n];
+    const h = p[side];
+    if (!h) return;
+    h[0] = x;
+    h[1] = y;
+    tidy(pts);
+    // Keep the other handle in line, at its own length.
+    const other = side === 'in' ? 'out' : 'in';
+    if (smooth && p[other]) {
+      const dx = p.x - h[0], dy = p.y - h[1];
+      const len = Math.hypot(dx, dy);
+      const keep = Math.hypot(p[other][0] - p.x, p[other][1] - p.y);
+      if (len > 1e-6) p[other] = [p.x + (dx / len) * keep, p.y + (dy / len) * keep];
+      tidy(pts);
+    }
+  }
+
+  function movePoint(pts, n, x, y) {
+    const p = pts[n];
+    if (n === 0 || n === pts.length - 1) return; // the ends stay at 0 and 1
+    x = Math.min(pts[n + 1].x - MIN_GAP, Math.max(pts[n - 1].x + MIN_GAP, x));
+    const dx = x - p.x, dy = y - p.y;
+    p.x = x;
+    p.y = y;
+    for (const h of [p.in, p.out]) { h[0] += dx; h[1] += dy; }
+    tidy(pts);
+  }
+
+  // Split the segment under time x into two at that point, with handles
+  // that keep the curve's shape (de Casteljau).
+  function addPoint(pts, x) {
+    const i = pts.findIndex((p) => p.x >= x);
+    const a = pts[i - 1], b = pts[i];
+    if (x - a.x < MIN_GAP || b.x - x < MIN_GAP) return;
+    const P0 = [a.x, a.y], P1 = a.out, P2 = b.in, P3 = [b.x, b.y];
+    const at = (u) => {
+      const m = 1 - u;
+      return m * m * m * P0[0] + 3 * m * m * u * P1[0] + 3 * m * u * u * P2[0] + u * u * u * P3[0];
+    };
+    let lo = 0, hi = 1, u = 0.5;
+    for (let k = 0; k < 40; k++) {
+      u = (lo + hi) / 2;
+      if (at(u) < x) lo = u;
+      else hi = u;
+    }
+    const lerp = (p, q) => [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u];
+    const q0 = lerp(P0, P1), q1 = lerp(P1, P2), q2 = lerp(P2, P3);
+    const r0 = lerp(q0, q1), r1 = lerp(q1, q2);
+    const s = lerp(r0, r1);
+    a.out = q0;
+    b.in = q2;
+    pts.splice(i, 0, { x: s[0], y: s[1], in: r0, out: r1 });
+  }
+
+  function setCurve(key, pts, { keepFields = false } = {}) {
+    key.ease = curveName(pts);
     syncEditor(key, keepFields);
     render();
     opts.onEdit('ease');
   }
 
   function syncEditor(key, keepFields = false) {
-    const p = handlesFor(key);
-    const N = 64;
+    const pts = pointsOf(key.ease);
+    const N = 96;
     let d = '';
     for (let i = 0; i <= N; i++) {
       const t = i / N;
@@ -385,16 +482,31 @@ export function createTimelineUI(opts) {
       d += `${i ? 'L' : 'M'}${gx(t).toFixed(1)},${gy(v).toFixed(1)}`;
     }
     pop.querySelector('[data-curve]').setAttribute('d', d);
-    const clampY = (y) => Math.min(Y_TOP, Math.max(Y_BOT, y));
-    const h1 = [gx(p[0]), gy(clampY(p[1]))];
-    const h2 = [gx(p[2]), gy(clampY(p[3]))];
-    const set = (el, attrs) => { for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); };
-    set(pop.querySelector('[data-h="1"]'), { cx: h1[0], cy: h1[1] });
-    set(pop.querySelector('[data-h="2"]'), { cx: h2[0], cy: h2[1] });
-    set(pop.querySelector('[data-arm="1"]'), { x1: gx(0), y1: gy(0), x2: h1[0], y2: h1[1] });
-    set(pop.querySelector('[data-arm="2"]'), { x1: gx(1), y1: gy(1), x2: h2[0], y2: h2[1] });
+    pop.querySelector('[data-hit]').setAttribute('d', d);
+
+    // Arms and handles first, so the points sit on top.
+    const last = pts.length - 1;
+    let arms = '', handles = '', dots = '';
+    pts.forEach((p, n) => {
+      const px = gx(p.x), py = gy(clampY(p.y));
+      for (const side of ['in', 'out']) {
+        const h = p[side];
+        if (!h) continue;
+        const hx = gx(h[0]).toFixed(1), hy = gy(clampY(h[1])).toFixed(1);
+        arms += `<line class="ep-arm" x1="${px}" y1="${py}" x2="${hx}" y2="${hy}"/>`;
+        handles += `<circle class="ep-handle${pts.length > 2 ? ' small' : ''}" data-n="${n}" data-side="${side}" cx="${hx}" cy="${hy}" r="${pts.length > 2 ? 5 : 7}"/>`;
+      }
+      dots += n === 0 || n === last
+        ? `<circle class="ep-end" cx="${px}" cy="${py}" r="3.5"/>`
+        : `<rect class="ep-point" data-n="${n}" x="${px - 4.5}" y="${py - 4.5}" width="9" height="9" rx="1.5"><title>Drag to move · double-click to remove</title></rect>`;
+    });
+    pop.querySelector('[data-points]').innerHTML = arms + handles + dots;
+
     pop.querySelector('[data-name]').textContent = easeLabel(key.ease);
-    if (!keepFields) {
+    const two = pts.length === 2;
+    pop.querySelector('.ep-fields').hidden = !two;
+    if (two && !keepFields) {
+      const p = [...pts[0].out, ...pts[1].in];
       pop.querySelectorAll('[data-f]').forEach((input, j) => { input.value = +p[j].toFixed(2); });
     }
     for (const b of pop.querySelectorAll('button[data-e]')) b.classList.toggle('on', b.dataset.e === key.ease);

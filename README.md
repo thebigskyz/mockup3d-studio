@@ -291,7 +291,9 @@ The Environment section chooses what lights the device and shows in its reflecti
   - The copy also goes onto the system clipboard, so you can paste into another project or tab.
 - Click a segment to open the **easing editor**:
   - **Presets:** Linear, Ease in, Ease out, Ease in-out, Smooth, Back (overshoot), Spring or Hold.
-  - **Custom curve:** drag the two yellow handles on the graph (time across, value up), or type exact `x1 y1 x2 y2` values. These are the same numbers as a CSS `cubic-bezier()`, so you can paste curves from other tools.
+  - **Custom curve:** drag the yellow handles on the graph (time across, value up). With just the two ends you can also type exact `x1 y1 x2 y2` values. These are the same numbers as a CSS `cubic-bezier()`, so you can paste curves from other tools.
+  - **More points:** double-click the line to add a point (the curve keeps its shape), and double-click a point to remove it. Drag a point to move it, with its handles. A point's two handles stay in line for a smooth curve; Alt-drag one to bend just that side.
+  - **Spring** opens with a point at each bounce, so you can make one bounce bigger, flatten another or take one out without losing the rest. Click the Spring preset to get the original back.
   - Raising a handle above the top of the box makes the motion overshoot and settle back.
   - A dot traces the curve and a ball previews the motion.
 

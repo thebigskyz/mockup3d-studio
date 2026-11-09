@@ -1156,20 +1156,25 @@ input[type=range]::-moz-range-thumb {
 .ease-pop button:hover { background: var(--bg3); color: var(--text); }
 .ease-pop button.on { border-color: rgba(75,141,255,.5); background: var(--accent-soft); color: var(--text); }
 .curve { width: auto; height: auto; }
-.ep-editor { display: flex; flex-direction: column; gap: 8px; width: 186px; flex: none; }
+.ep-editor { display: flex; flex-direction: column; gap: 8px; width: 236px; flex: none; }
 .ep-presets { display: flex; flex-direction: column; gap: 2px; min-width: 128px; }
 .ep-name { color: var(--hot); text-transform: none; letter-spacing: 0; font-weight: 500; }
 .ep-graph { display: block; flex: none; touch-action: none; user-select: none; }
 .ep-area { fill: rgba(255,255,255,.03); stroke: rgba(255,255,255,.08); }
 .ep-grid { stroke: rgba(255,255,255,.05); }
 .ep-diag { stroke: rgba(255,255,255,.14); stroke-dasharray: 3 3; }
-.ep-arm { stroke: rgba(255,204,77,.7); stroke-width: 1.2; }
+.ep-arm { stroke: rgba(255,204,77,.7); stroke-width: 1.2; pointer-events: none; }
 .ep-curve { fill: none; stroke: var(--hot); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .ep-end { fill: #d9d9e0; }
 .ep-dot { fill: #fff; filter: drop-shadow(0 0 4px rgba(84,166,255,.9)); pointer-events: none; }
 .ep-handle { fill: #ffcc4d; stroke: #131316; stroke-width: 2; cursor: grab; }
 .ep-handle:hover { fill: #ffe08a; }
 .ep-handle:active { cursor: grabbing; }
+.ep-handle.small { stroke-width: 1.5; }
+.ep-point { fill: #fff; stroke: #131316; stroke-width: 1.5; cursor: move; }
+.ep-point:hover { fill: var(--hot); }
+.ep-hit { fill: none; stroke: transparent; stroke-width: 12; cursor: copy; }
+.ep-hint { font-size: 10.5px; line-height: 1.35; color: var(--text-faint); }
 .ep-axis { fill: var(--text-faint); font: 9.5px var(--mono); }
 .ep-fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
 .ep-fields label { display: flex; flex-direction: column; gap: 2px; min-width: 0; font: 9.5px var(--mono); color: var(--text-faint); }
