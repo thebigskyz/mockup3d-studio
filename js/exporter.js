@@ -17,6 +17,45 @@ export async function renderPNG(ctx, { width, height, trim = false, supersample 
   return blob;
 }
 
+/**
+ * Render an animation as numbered PNGs (transparency kept), zipped into a
+ * folder: `name/name_0000.png`, `name/name_0001.png` … Video editors (After
+ * Effects, Premiere, DaVinci Resolve, Final Cut via Motion) import a
+ * numbered sequence like this as one clip.
+ *
+ * @param opts.renderFrame async (t, render) => canvas, as for renderMP4
+ * @returns Blob (application/zip)
+ */
+export async function renderPNGSequence(ctx, { width, height, fps, duration, supersample = 2, renderFrame, onProgress, signal, name = 'frames' }) {
+  const { Zip, ZipPassThrough } = await import('fflate');
+  const total = Math.max(1, Math.round(duration * fps));
+  const digits = Math.max(4, String(total - 1).length);
+  // Stream the zip into chunks (PNGs are already compressed, so they're
+  // stored as they are) rather than holding every frame twice.
+  const chunks = [];
+  let zipError = null;
+  const zip = new Zip((err, data) => {
+    if (err) zipError = err;
+    else chunks.push(data);
+  });
+  await ctx.withRenderSize(width, height, async (render) => {
+    for (let i = 0; i < total; i++) {
+      if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError');
+      const canvas = await renderFrame(i / fps, render);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Export failed: the frames were too large for this browser. Try a smaller size.');
+      const file = new ZipPassThrough(`${name}/${name}_${String(i).padStart(digits, '0')}.png`);
+      zip.add(file);
+      file.push(new Uint8Array(await blob.arrayBuffer()), true);
+      if (zipError) throw zipError;
+      onProgress?.(i + 1, total);
+    }
+  }, { supersample });
+  zip.end();
+  if (zipError) throw zipError;
+  return new Blob(chunks, { type: 'application/zip' });
+}
+
 /** Crop to the non-transparent pixels, plus a small margin. */
 export async function trimTransparent(blob, marginRatio = 0.03) {
   const bmp = await createImageBitmap(blob);

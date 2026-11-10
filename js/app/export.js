@@ -1,7 +1,7 @@
-// Export: PNG and MP4.
+// Export: a PNG, an MP4, or a PNG sequence (every frame, transparency kept).
 
 import * as THREE from 'three';
-import { renderPNG, download } from '../exporter.js';
+import { renderPNG, renderPNGSequence, download } from '../exporter.js';
 import { renderMP4, mp4Supported } from '../video-export.js';
 import { openFrameSource } from '../video-frames.js';
 import { cameraAt, play, playhead, playing, poseAt, setTime } from './animation.js';
@@ -18,7 +18,8 @@ export let exporting = false;
 
 export async function doExport() {
   if (exporting) return;
-  if (out().format === 'mp4') return exportMP4();
+  const f = out().format;
+  if (f === 'mp4' || f === 'pngseq') return exportAnimation(f);
   return exportPNG();
 }
 
@@ -109,8 +110,12 @@ async function videoFramesForExport(id) {
   };
 }
 
-/** Render the animation to an MP4 blob (also used by tests). */
-export async function renderAnimationMP4({ onProgress, signal } = {}) {
+/**
+ * Render the animation with `encode` (renderMP4 or renderPNGSequence): each
+ * frame poses every device and the camera, and shows each design video at
+ * that time.
+ */
+async function renderAnimation(encode, opts) {
   const [width, height] = outputSize();
   // One decoder per device with a video; the others are seeked.
   const sources = new Map();
@@ -120,16 +125,13 @@ export async function renderAnimationMP4({ onProgress, signal } = {}) {
     sources.set(d.id, f);
   }
   try {
-    return await renderMP4(ctx, {
+    return await encode(ctx, {
       width,
       height,
       fps: anim.fps,
       duration: anim.duration,
-      quality: out().quality,
-      grain: out().grain,
-      signal,
-      onProgress,
       supersample: out().aa,
+      ...opts,
       renderFrame: async (t, render) => {
         for (const d of state.devices) ctx.setSlotPose(d.id, poseAt(d.id, t));
         ctx.setCamera(cameraAt(t));
@@ -155,8 +157,18 @@ export async function renderAnimationMP4({ onProgress, signal } = {}) {
   }
 }
 
-async function exportMP4() {
-  if (!mp4Supported()) {
+/** Render the animation to an MP4 blob (also used by tests). */
+export const renderAnimationMP4 = ({ onProgress, signal } = {}) =>
+  renderAnimation(renderMP4, { quality: out().quality, grain: out().grain, onProgress, signal });
+
+/** Render the animation to a zip of numbered PNGs (also used by tests). */
+export const renderAnimationPNGs = ({ onProgress, signal, name = 'frames' } = {}) =>
+  renderAnimation(renderPNGSequence, { onProgress, signal, name });
+
+/** Export the animation as an MP4 ('mp4') or a zipped PNG sequence ('pngseq'). */
+async function exportAnimation(kind) {
+  const mp4 = kind === 'mp4';
+  if (mp4 && !mp4Supported()) {
     setStatus('MP4 export needs WebCodecs (Chrome, Edge or Safari 16.4+).', 'err');
     return;
   }
@@ -168,21 +180,27 @@ async function exportMP4() {
   $('progress').hidden = false;
   $('exportBtn').disabled = true;
   $('pgFill').style.width = '0%';
-  $('pgInfo').textContent = 'Preparing encoder…';
-  setStatus('Rendering MP4…', 'busy');
+  $('pgTitle').textContent = mp4 ? 'Rendering MP4' : 'Rendering PNG sequence';
+  $('pgInfo').textContent = mp4 ? 'Preparing encoder…' : 'Preparing…';
+  setStatus(mp4 ? 'Rendering MP4…' : 'Rendering PNG sequence…', 'busy');
+  const name = `mockup-${fileTag()}-${stamp()}`;
   const t0 = performance.now();
   try {
-    const blob = await renderAnimationMP4({
+    const opts = {
       signal: exportAbort.signal,
+      name,
       onProgress: (done, total) => {
         const el = (performance.now() - t0) / 1000;
         const left = (el / done) * (total - done);
         $('pgFill').style.width = `${(done / total) * 100}%`;
         $('pgInfo').textContent = `Frame ${done} / ${total} · ${left < 1 ? 'almost done' : `${Math.ceil(left)}s left`}`;
       },
-    });
-    download(blob, `mockup-${fileTag()}-${stamp()}.mp4`);
-    setStatus(`Exported MP4 · ${(blob.size / 1e6).toFixed(1)} MB in ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+    };
+    const blob = mp4 ? await renderAnimationMP4(opts) : await renderAnimationPNGs(opts);
+    download(blob, `${name}.${mp4 ? 'mp4' : 'zip'}`);
+    const took = `${(blob.size / 1e6).toFixed(1)} MB in ${((performance.now() - t0) / 1000).toFixed(1)}s`;
+    const frames = Math.max(1, Math.round(anim.duration * anim.fps));
+    setStatus(mp4 ? `Exported MP4 · ${took}` : `Exported ${frames} PNG frames (zip) · ${took}`);
   } catch (err) {
     if (err.name === 'AbortError') setStatus('Export cancelled');
     else {

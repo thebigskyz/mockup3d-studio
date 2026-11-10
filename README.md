@@ -44,6 +44,7 @@ Drop in a screenshot or a screen recording, choose an angle (or a whole animatio
 **Export**
 - **PNG**: transparent, solid colour, gradient or HDRI background, up to 8192 px, with anti-aliasing and optional trimming.
 - **MP4** (H.264): rendered frame by frame, so it's smooth whatever your computer's speed.
+- **PNG sequence**: every frame of the animation as a PNG in a .zip, transparency kept, for a transparent animation in a video editor.
 - Frames for every platform: 9:16, 16:9, 1:1, 4:5, the viewer's shape, or any custom size.
 
 **Projects and app**
@@ -147,7 +148,7 @@ For a video instead, pick a move in the **Motion presets** tab, switch the forma
 
 | Area | Where | What it's for |
 |---|---|---|
-| **Top bar** | top | Project menu (New, Open, Save), undo / redo, Install app, the PNG / MP4 switch and **Export** |
+| **Top bar** | top | Project menu (New, Open, Save), undo / redo, Install app, the PNG / MP4 / PNG seq switch and **Export** |
 | **Media Pool** | left | The design drop zone, the **Scene** list of devices, the **Model** list and **Orientation** |
 | **Viewer** | centre | The live preview. Its header has the preview background squares and the canvas zoom. Below it is the transport: play, time, duration, Loop |
 | **Bottom panel** | bottom | Tabs for **Timeline**, **Motion presets**, **Angles** and **Templates**. Drag its top edge to resize it |
@@ -317,15 +318,15 @@ The Environment section chooses what lights the device and shows in its reflecti
 
 ## Export
 
-Choose PNG or MP4 with the switch next to the **Export** button (or press **E**). Inspector › **Output** sets:
+Choose **PNG**, **MP4** or **PNG seq** with the switch next to the **Export** button (or press **E**). Inspector › **Output** sets:
 
 - **Frame:** Viewport, 9:16, 16:9, 1:1, 4:5 or **Custom**. The viewer reshapes to show exactly what will be exported.
   - **Custom** lets you type an exact canvas size in pixels (16–8192). The ↑ / ↓ keys step it by 1 (Shift: 10), and ⇄ swaps width and height.
 - **Size:**
   - With the Viewport frame, PNG size is 1×, 2× or 4× the viewer.
-  - With an aspect-ratio frame, you choose the short side: 720p, 1080p, 1440p or 4K.
+  - With an aspect-ratio frame (and for MP4 and PNG sequences with the Viewport frame), you choose the short side: 720p, 1080p, 1440p or 4K.
   - With Custom, the canvas size is the export size.
-- **Background:** None (transparent, the default; PNG only), Solid, Gradient (two colours plus an angle), or HDRI (the environment image, with adjustable focus). MP4 can't be transparent, so switching to MP4 with None selected changes it to Solid.
+- **Background:** None (transparent, the default; PNG and PNG sequence only), Solid, Gradient (two colours plus an angle), or HDRI (the environment image, with adjustable focus). MP4 can't be transparent, so switching to MP4 with None selected changes it to Solid.
 - **Quality** (MP4 only): Standard or High.
 - **Dithering** (MP4 only): faint noise that stops smooth gradients, such as a dark gradient background, showing visible steps (banding) after video compression.
   - **Off** is the cleanest, but gradients may band.
@@ -340,8 +341,14 @@ The selection outline and the viewer background never appear in exports.
 **MP4 notes:**
 
 - MP4 export renders every frame exactly, then encodes H.264 in the browser. It needs Chrome, Edge or Safari 16.4 or later.
-- MP4 can't be transparent, so use PNG when you need transparency.
+- MP4 can't be transparent (H.264 has no transparency). For a transparent animation, export a PNG sequence instead.
 - Design videos (MP4 or MOV) are decoded frame by frame during export, so long recordings export quickly. Formats the browser can't decode that way (such as WebM) fall back to a slower method.
+
+**PNG sequence notes:**
+
+- **PNG seq** renders every frame of the animation, as for MP4, and saves each as a PNG, with Background set to None for transparency. You get one .zip holding a folder of numbered frames (`…_0000.png`, `…_0001.png` …).
+- Video editors import a numbered sequence as one clip: in After Effects or Premiere, import the first frame with *PNG Sequence* (*Image Sequence*) ticked; DaVinci Resolve's Media Pool shows the folder as one clip. Set the clip's frame rate to the timeline's fps if the editor asks.
+- The frames are full-size and lossless, so the zip is large: roughly 10 MB a second at 1080p and 30 fps for a transparent background, more for HDRI backgrounds. Trim empty space doesn't apply (every frame has the same size).
 
 ## Projects
 
@@ -434,7 +441,7 @@ These change only how big you see the frame, not the export.
 
 ### Files, undo and export · <kbd>E</kbd>
 
-- <kbd>E</kbd> exports a PNG or an MP4, whichever is chosen next to the Export button. <kbd>Esc</kbd> cancels an export that's running.
+- <kbd>E</kbd> exports a PNG, an MP4 or a PNG sequence, whichever is chosen next to the Export button. <kbd>Esc</kbd> cancels an export that's running.
 - <kbd>⌘ Cmd</kbd> + <kbd>Z</kbd> undoes.
 - <kbd>⇧ Shift</kbd> + <kbd>⌘ Cmd</kbd> + <kbd>Z</kbd>, or <kbd>⌘ Cmd</kbd> + <kbd>Y</kbd>, redoes.
 - <kbd>⌘ Cmd</kbd> + <kbd>S</kbd> saves the project, and <kbd>⇧ Shift</kbd> + <kbd>⌘ Cmd</kbd> + <kbd>S</kbd> is Save As.
@@ -470,7 +477,7 @@ Plain JavaScript modules, no build step. `js/main.js` starts the app; the parts 
 | `presets.js`, `scene-templates.js` | Angle and motion presets; templates |
 | `transport.js`, `timeline-panel.js` | Play controls and timecode; the timeline panel |
 | `environment.js`, `models.js` | HDRI lighting and the background; imported device models |
-| `projects.js`, `export.js` | `.m3d` projects; PNG and MP4 export |
+| `projects.js`, `export.js` | `.m3d` projects; PNG, MP4 and PNG sequence export |
 | `keyboard.js`, `status.js`, `util.js` | Shortcuts, the status bar, small helpers |
 
 The rest of `js/` holds the lower-level pieces they use: the renderer (`scene.js`), device models (`devices.js`, `custom-devices.js`), keyframes and easing (`timeline.js`, `easing.js`, `timeline-ui.js`), and exporting and file formats.

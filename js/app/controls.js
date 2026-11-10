@@ -234,7 +234,7 @@ export function buildControls() {
   });
   seg('bgModeSeg', (v) => {
     if (v === 'transparent' && out().format === 'mp4') {
-      setStatus('MP4 can’t be transparent — use PNG for a transparent background.', 'busy');
+      setStatus('MP4 can’t be transparent. For a transparent animation, choose PNG seq next to Export.', 'busy');
       return;
     }
     out().bg = v;

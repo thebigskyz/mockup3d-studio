@@ -67,7 +67,9 @@ export function syncControls() {
   syncShadowHint();
   on('grainSeg', (v) => v === o.grain);
   on('aaSeg', (v) => +v === o.aa);
-  $('bgModeSeg').querySelector('[data-v=transparent]').disabled = o.format === 'mp4';
+  const none = $('bgModeSeg').querySelector('[data-v=transparent]');
+  none.disabled = o.format === 'mp4';
+  none.title = o.format === 'mp4' ? 'MP4 can’t be transparent: choose PNG seq for a transparent animation' : '';
   const pxMode = o.format === 'png' && o.frame === 'viewport';
   $('sizeSeg').innerHTML = (pxMode ? [[1, '1×'], [2, '2×'], [4, '4×']] : [[720, '720p'], [1080, '1080p'], [1440, '1440p'], [2160, '4K']])
     .map(([v, l]) => `<button data-v="${v}" class="${(pxMode ? o.scale : o.size) === v ? 'on' : ''}">${l}</button>`).join('');
@@ -86,7 +88,7 @@ export function syncControls() {
   $('grainRow').hidden = o.format !== 'mp4';
   $('trimRow').hidden = !(o.format === 'png' && o.bg === 'transparent');
   $('trim').checked = o.trim;
-  $('exportLabel').textContent = o.format === 'mp4' ? 'Export MP4' : 'Export PNG';
+  $('exportLabel').textContent = { mp4: 'Export MP4', pngseq: 'Export frames' }[o.format] || 'Export PNG';
   $('customRow').hidden = o.frame !== 'custom';
   $('sizeRow').hidden = o.frame === 'custom';
   if (document.activeElement !== $('canvasW')) $('canvasW').value = o.cw;
@@ -148,9 +150,13 @@ export function syncExportSize() {
   }
   const trimmed = o.format === 'png' && o.bg === 'transparent' && o.trim;
   $('exportSize').textContent = `${trimmed ? '≤ ' : ''}${w} × ${h}`;
+  const rgba = o.bg === 'transparent' ? 'RGBA' : 'RGB';
+  const frames = Math.max(1, Math.round(anim.duration * anim.fps));
   $('outFormat').textContent = o.format === 'mp4'
     ? `MP4 · H.264 · ${anim.fps} fps · ${anim.duration.toFixed(1)}s`
-    : `PNG · ${o.bg === 'transparent' ? 'RGBA' : 'RGB'}`;
+    : o.format === 'pngseq'
+      ? `${frames} PNGs (${rgba}) · ${anim.fps} fps · zip`
+      : `PNG · ${rgba}`;
   const dur = $('durationv');
   if (dur && !dur.isEditing) dur.textContent = PARAMS.duration.fmt(anim.duration);
 }

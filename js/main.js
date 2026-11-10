@@ -12,7 +12,7 @@ import { buildControls, frameAll } from './app/controls.js';
 import { ctx } from './app/ctx.js';
 import { useFile } from './app/designs.js';
 import { applyBackground, applyEnvAdjust, buildEnvList, setEnv } from './app/environment.js';
-import { renderAnimationMP4 } from './app/export.js';
+import { renderAnimationMP4, renderAnimationPNGs } from './app/export.js';
 import { history, redo, save, snapshot, syncUndoButtons, undo } from './app/history.js';
 import { insts, sel, syncInstances } from './app/instances.js';
 import { setParam } from './app/params.js';
@@ -64,7 +64,7 @@ syncUndoButtons();
 
 // Handy for debugging and tests from the console.
 window.mockup = {
-  ctx, state, insts, useFile, setTime, play, renderAnimationMP4, undo, redo, history, project,
+  ctx, state, insts, useFile, setTime, play, renderAnimationMP4, renderAnimationPNGs, undo, redo, history, project,
   collectProject, packProject, openProject, saveProject, newProject, addDevice, deleteDevices, selectSceneDevice, setSelection, selectAll,
   applyTemplate: (id) => applyTemplate(TEMPLATES.find((t) => t.id === id)), applyMotion: (id) => applyMotion(MOTION_PRESETS.find((p) => p.id === id)),
   frameAll, trackOf, poseAt, cameraAt,
