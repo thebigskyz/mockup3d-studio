@@ -41,7 +41,12 @@ async function compare({ repo, branch, commit }) {
   });
   // 404: a private repo, or your commit / branch isn't on GitHub.
   if (!res.ok) return { behind: 0 };
-  return { behind: (await res.json()).ahead_by || 0 };
+  const data = await res.json();
+  // Commits that only change the Figma plugin leave the app as it is. (GitHub
+  // lists at most 300 changed files; with that many, assume the app changed.)
+  const files = data.files || [];
+  const appChanged = files.length >= 300 || files.some((f) => !f.filename.startsWith('figma-plugin/'));
+  return { behind: appChanged ? data.ahead_by || 0 : 0 };
 }
 
 // Dismissing hides the notice until GitHub has more commits, or you pull.

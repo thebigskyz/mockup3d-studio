@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!--
+  Mockup3D Studio for Figma: the panel. It runs the app's own renderer
+  (js/scene.js, js/devices.js…), loaded from Mockup3D Studio running on this
+  computer (python3 serve.py) or, when that can't be reached, from the app on
+  GitHub (through jsDelivr), plus three.js from jsDelivr. Rendering happens
+  here because Figma's side of a plugin (code.js) has no WebGL.
+-->
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+</script>
+<style>
+  :root {
+    --bg: var(--figma-color-bg, #2c2c2c);
+    --bg2: var(--figma-color-bg-secondary, #383838);
+    --hover: var(--figma-color-bg-hover, #444);
+    --text: var(--figma-color-text, #fff);
+    --text2: var(--figma-color-text-secondary, #b3b3b3);
+    --border: var(--figma-color-border, #444);
+    --brand: var(--figma-color-bg-brand, #0d99ff);
+    --on-brand: var(--figma-color-text-onbrand, #fff);
+    --danger: var(--figma-color-text-danger, #f24822);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 11px/1.4 Inter, -apple-system, system-ui, sans-serif; }
+  body { padding: 12px; display: flex; flex-direction: column; gap: 10px; user-select: none; }
+  button { font: inherit; color: inherit; }
+
+  /* The app's logo and name, as in its top bar. */
+  .brand { display: flex; align-items: center; gap: 8px; }
+  .logo { width: 24px; height: 24px; border-radius: 6px; display: grid; place-items: center; background: #EFE7D9; flex: none; }
+  .logo svg { width: 20px; height: 20px; }
+  .brand-name { font-size: 12.5px; font-weight: 500; letter-spacing: -0.01em; color: var(--text2); }
+  .brand-name b { color: var(--text); font-weight: 700; }
+
+  .stage {
+    position: relative; width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; cursor: grab; touch-action: none;
+    background: repeating-conic-gradient(var(--bg2) 0 25%, var(--bg) 0 50%) 0 0 / 16px 16px;
+  }
+  .stage.dragging { cursor: grabbing; }
+  .stage canvas { display: block; width: 100% !important; height: 100% !important; }
+  .msg {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    padding: 24px; text-align: center; color: var(--text2); background: color-mix(in srgb, var(--bg) 82%, transparent);
+  }
+  .msg[hidden] { display: none; }
+  .msg code { color: var(--text); }
+
+  .src { display: flex; justify-content: space-between; gap: 8px; color: var(--text2); min-height: 16px; }
+  .src b { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .row { display: grid; grid-template-columns: 64px 1fr; align-items: center; gap: 8px; }
+  .row > label { color: var(--text2); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chips button {
+    border: 1px solid var(--border); background: transparent; border-radius: 5px; padding: 4px 8px; cursor: pointer;
+  }
+  .chips button:hover { background: var(--hover); }
+  .chips button.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+  .swatches { display: flex; gap: 6px; }
+  .swatches button {
+    width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border); cursor: pointer; padding: 0;
+  }
+  .swatches button.on { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+  .actions { display: flex; gap: 6px; margin-top: 2px; }
+  .actions button { flex: 1; border-radius: 6px; padding: 8px; cursor: pointer; border: 1px solid var(--border); background: transparent; }
+  .actions button.primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); font-weight: 600; }
+  .actions button:disabled { opacity: 0.45; cursor: default; }
+  .foot { display: flex; justify-content: space-between; align-items: center; color: var(--text2); }
+  .link { background: none; border: 0; padding: 0; color: var(--brand); cursor: pointer; }
+  .hint { color: var(--text2); }
+  .err { color: var(--danger); }
+</style>
+</head>
+<body>
+  <header class="brand">
+    <span class="logo"><svg viewBox="-7 -2 104 104" aria-hidden="true"><circle cx="66" cy="36" r="24" fill="#E0483B"/><path d="M0 88a30 30 0 0 1 60 0z" fill="#F3C343"/><rect x="36" y="22" width="34" height="66" rx="5.5" fill="#151515"/><rect x="30" y="16" width="34" height="66" rx="5.5" fill="#2F69AE"/><rect x="41.2" y="20.5" width="11.6" height="4" rx="2" fill="#EFE7D9"/></svg></span>
+    <span class="brand-name">Mockup3D <b>Studio</b></span>
+  </header>
+  <div class="stage" id="stage" title="Drag to turn the device">
+    <div class="msg" id="msg">Starting…</div>
+  </div>
+  <div class="src" id="src"><span class="hint">Select a frame to mock up</span></div>
+
+  <div class="row"><label>Device</label>
+    <div class="chips" id="model">
+      <button data-v="iphone-18-pro">iPhone</button>
+      <button data-v="ipad-pro-11">iPad</button>
+    </div>
+  </div>
+  <div class="row"><label>Angle</label><div class="chips" id="angles"></div></div>
+  <div class="row"><label>Finish</label><div class="swatches" id="finish"></div></div>
+  <div class="row"><label>Shadow</label>
+    <div class="chips" id="shadow">
+      <button data-v="off">Off</button>
+      <button data-v="soft">Soft</button>
+    </div>
+  </div>
+  <div class="row"><label>Resolution</label>
+    <div class="chips" id="density" title="Pixels per Figma point in the mockup image">
+      <button data-v="1">1×</button>
+      <button data-v="2">2×</button>
+      <button data-v="3">3×</button>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="primary" disabled>Insert mockup</button>
+    <button id="secondary" hidden>Insert as new</button>
+  </div>
+  <div class="actions">
+    <button id="openApp" hidden>Open web app ↗</button>
+  </div>
+  <div class="foot">
+    <button class="link" id="updateAll">Update all mockups on this page</button>
+    <span id="busy"></span>
+  </div>
+
+<script type="module">
+import * as THREE from 'three';
+
+// Mockup3D Studio running on this computer (python3 serve.py picks the next
+// free port when 5173 is taken). Listed in manifest.json's devAllowedDomains.
+const PORTS = [5173, 5174, 5175, 5176, 5177];
+// Otherwise the app on GitHub (its main branch, through jsDelivr's CDN).
+const GITHUB = 'https://cdn.jsdelivr.net/gh/thebigskyz/mockup3d-studio@main';
+const REPO = 'https://github.com/thebigskyz/mockup3d-studio';
+const ANGLES = [
+  { label: 'Front', rot: [0, 0, 0] },
+  { label: 'Left', rot: [0, -30, 0] },
+  { label: 'Right', rot: [0, 30, 0] },
+  { label: 'Hero', rot: [10, -28, -6] },
+  { label: 'Lean back', rot: [-28, 0, 0] },
+  { label: 'Tabletop', rot: [-62, 0, 28] },
+  { label: 'Isometric', rot: [-54.7, 0, -45] },
+  { label: 'Float', rot: [18, 22, 10] },
+  { label: 'Side', rot: [0, -82, 0] },
+];
+const DEFAULTS = { model: 'iphone-18-pro', finish: 'black', rot: [10, -28, -6], shadow: 'off', density: 2 };
+// A soft shadow on a backdrop behind the device (as Shadow › Backdrop in the app).
+const SOFT_SHADOW = { mode: 'backdrop', color: '#000000', strength: 0.3, softness: 0.5, distance: 0.4, offset: 0.5, angle: -35 };
+// The rendered square is this much bigger than the frame, so the screen in
+// the mockup comes out about the frame's size.
+const RENDER_MARGIN = 1.2;
+
+const $ = (id) => document.getElementById(id);
+const post = (msg) => parent.postMessage({ pluginMessage: msg }, '*');
+
+let app = null;          // the app's modules
+let ctx = null;          // the 3D scene
+let settings = { ...DEFAULTS };
+let source = null;       // { id, name, w, h, bytes } of the selected frame
+let mockupId = null;     // the mockup being edited, if any
+let busy = false;
+
+// ---------------------------------------------------------------------------
+// Messages from Figma (code.js)
+// ---------------------------------------------------------------------------
+window.addEventListener('message', (e) => {
+  const msg = e.data && e.data.pluginMessage;
+  if (!msg) return;
+  if (msg.type === 'init') {
+    if (msg.settings) settings = clean(msg.settings);
+    syncControls();
+  } else if (msg.type === 'source') {
+    onSource(msg);
+  } else if (msg.type === 'render') {
+    queue(() => renderJob(msg));
+  } else if (msg.type === 'placed') {
+    setBusy(false);
+  } else if (msg.type === 'progress') {
+    $('busy').textContent = msg.text || '';
+  }
+});
+post({ type: 'hello' });
+
+function clean(s) {
+  const out = { ...DEFAULTS, ...(s || {}) };
+  out.rot = [0, 1, 2].map((i) => (Number.isFinite(out.rot?.[i]) ? out.rot[i] : 0));
+  out.density = [1, 2, 3].includes(+out.density) ? +out.density : 2;
+  return out;
+}
+
+// Scene work (loading models, textures, rendering) happens one step at a time.
+let chain = Promise.resolve();
+const queue = (fn) => (chain = chain.then(fn).catch((err) => {
+  console.error(err);
+  post({ type: 'notify', text: err.message || String(err), error: true });
+}));
+
+// ---------------------------------------------------------------------------
+// Loading the renderer from the app
+// ---------------------------------------------------------------------------
+let connectError = null; // why the last port didn't answer, shown if none do
+async function findApp() {
+  for (const port of PORTS) {
+    const base = `http://localhost:${port}`;
+    try {
+      const res = await fetch(`${base}/version.json`, { cache: 'no-store' });
+      if (res.ok && 'commit' in (await res.json())) return base;
+      connectError = `localhost:${port} answered ${res.status}`;
+    } catch (err) {
+      connectError = `${err.name}: ${err.message}`; // not running on this port
+    }
+  }
+  return null;
+}
+
+async function start() {
+  showMsg('Connecting to Mockup3D Studio…');
+  const local = await findApp();
+  if (!local) console.info('Mockup3D Studio isn’t reachable on this computer; using GitHub.', connectError);
+  const base = local || GITHUB;
+  showMsg(local ? 'Loading the renderer…' : 'Loading the renderer from GitHub…');
+  const load = (path) => import(`${base}/js/${path}`);
+  let modules;
+  try {
+    modules = await Promise.all(['scene.js', 'devices.js', 'environments.js', 'exporter.js', 'timeline.js'].map(load));
+  } catch (err) {
+    showMsg(`Couldn’t load Mockup3D Studio’s renderer.<br><br>Run <code>python3 serve.py</code> in the app’s folder, or check you’re online.<br><br><button class="link" id="retry">Try again</button><br><br><small>${escapeHTML(connectError || err.message)}</small>`);
+    $('retry').onclick = start;
+    return;
+  }
+  app = Object.assign({}, ...modules);
+  // A link to the web app: the copy this panel uses, or its GitHub page
+  // (which says how to run it) when that's where the renderer came from.
+  const openApp = $('openApp');
+  openApp.textContent = local ? 'Open web app ↗' : 'Web app on GitHub ↗';
+  openApp.title = local
+    ? `Open Mockup3D Studio (${local.replace('http://', '')}), the copy this plugin is using`
+    : 'python3 serve.py isn’t reachable, so the plugin uses the app from GitHub. Open its page, which says how to run it.';
+  openApp.onclick = () => post({ type: 'open', url: local ? `${local}/` : REPO });
+  openApp.hidden = false;
+
+  ctx = app.createScene($('stage'));
+  ctx.addSlot('d');
+  // The app's default studio look.
+  ctx.setBackground({ mode: 'transparent' });
+  ctx.setLight(0.7);
+  ctx.setReflectionZoom(0.33);
+  ctx.setEnvRotation(35);
+  ctx.setEnvTint(app.kelvinTint(7000));
+  ctx.setEnvAdjust({ highlights: 0.28, contrast: 1.5 });
+  ctx.setCamera(app.cameraPose());
+  app.loadEnvironment('studio-panels').then((tex) => tex && ctx.setEnvironment(tex)).catch((err) => console.warn('HDRI', err));
+
+  buildControls();
+  await queue(() => show(settings, source));
+  hideMsg();
+  post({ type: 'ready' });
+  syncControls();
+}
+
+// ---------------------------------------------------------------------------
+// The scene: one device showing the frame
+// ---------------------------------------------------------------------------
+const loaded = new Map(); // model id -> loaded device (its model is swapped into the slot)
+let shownModel = null;
+let screenTex = null;     // { key, texture } of the frame on the screen
+
+async function useModel(id) {
+  if (!loaded.has(id)) loaded.set(id, app.loadDevice(id));
+  const d = await loaded.get(id);
+  if (shownModel !== id) {
+    ctx.setSlotModel('d', d.root, d.radius);
+    ctx.setUnit(d.radius);
+    shownModel = id;
+  }
+  return d;
+}
+
+async function textureOf(src) {
+  const bmp = await createImageBitmap(new Blob([src.bytes], { type: 'image/png' }));
+  const t = new THREE.Texture(bmp);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.flipY = false; // glTF UVs have v = 0 at the top
+  t.anisotropy = ctx.renderer.capabilities.getMaxAnisotropy();
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.needsUpdate = true;
+  return t;
+}
+
+/** Show `src` on the device with `s` (and keep its texture for next time). */
+async function show(s, src) {
+  const d = await useModel(s.model);
+  d.setFinish(app.FINISHES.find((f) => f.id === s.finish) || app.FINISHES[0]);
+  d.setGlare(0.01);
+  d.setIsland(true);
+  d.setLogo?.(true);
+  const landscape = !!src && src.w > src.h;
+  ctx.setSlotLandscape('d', landscape);
+  ctx.setSlotPose('d', app.devicePose({ rot: s.rot }));
+  ctx.setShadow(s.shadow === 'soft' ? SOFT_SHADOW : { mode: 'off' });
+
+  const key = src ? src.bytes : null;
+  if (screenTex?.key !== key) {
+    screenTex?.texture?.dispose();
+    screenTex = { key, texture: src ? await textureOf(src) : null };
+  }
+  const tex = screenTex.texture;
+  if (tex && d.info) {
+    app.fitTexture(tex, tex.image.width, tex.image.height, d.info, landscape);
+    d.screenMaterial.map = tex;
+    d.screenMaterial.color.set(0xffffff);
+  } else {
+    d.screenMaterial.map = null;
+    d.screenMaterial.color.set(0x1b1b1f); // no frame yet: a dark screen
+  }
+  d.screenMaterial.needsUpdate = true;
+}
+
+/** Render the mockup as a trimmed, transparent PNG. */
+async function render(s, src) {
+  const long = Math.max(src.w, src.h);
+  const size = Math.round(Math.min(4096, Math.max(512, long * RENDER_MARGIN * s.density)));
+  const blob = await app.renderPNG(ctx, { width: size, height: size, trim: true, supersample: 2 });
+  const bmp = await createImageBitmap(blob);
+  return { bytes: new Uint8Array(await blob.arrayBuffer()), width: bmp.width, height: bmp.height };
+}
+
+/** Render a mockup for Figma (updating mockups), then go back to the selection. */
+async function renderJob(msg) {
+  try {
+    const s = clean(msg.settings);
+    await show(s, msg.source);
+    const r = await render(s, msg.source);
+    post({ type: 'rendered', job: msg.job, ...r });
+  } catch (err) {
+    post({ type: 'render-error', job: msg.job, message: err.message || String(err) });
+  } finally {
+    await show(settings, source);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Selection
+// ---------------------------------------------------------------------------
+function onSource(msg) {
+  const el = $('src');
+  if (msg.none) {
+    source = null;
+    mockupId = null;
+    el.innerHTML = `<span class="hint">${escapeHTML(msg.reason)}</span>`;
+  } else if (msg.loading) {
+    el.innerHTML = `<b>${escapeHTML(msg.name)}</b><span class="hint">Exporting…</span>`;
+    return;
+  } else {
+    source = msg.source;
+    mockupId = msg.mockup;
+    if (msg.settings) settings = clean(msg.settings); // editing: that mockup's settings
+    el.innerHTML = `<b>${mockupId ? 'Mockup of ' : ''}${escapeHTML(source.name)}</b><span>${Math.round(source.w)} × ${Math.round(source.h)}</span>`;
+  }
+  syncControls();
+  if (ctx) queue(() => show(settings, source));
+}
+
+// ---------------------------------------------------------------------------
+// Controls
+// ---------------------------------------------------------------------------
+function buildControls() {
+  for (const a of ANGLES) {
+    const b = document.createElement('button');
+    b.textContent = a.label;
+    b.onclick = () => change({ rot: [...a.rot] });
+    $('angles').appendChild(b);
+  }
+  for (const f of app.FINISHES) {
+    const b = document.createElement('button');
+    b.dataset.v = f.id;
+    b.title = f.label;
+    b.style.background = `radial-gradient(circle at 35% 30%, ${f.back}, ${f.frame} 60%, ${f.accent})`;
+    $('finish').appendChild(b);
+  }
+  for (const [id, key, num] of [['model', 'model'], ['finish', 'finish'], ['shadow', 'shadow'], ['density', 'density', true]]) {
+    $(id).addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-v]');
+      if (b) change({ [key]: num ? +b.dataset.v : b.dataset.v });
+    });
+  }
+  $('primary').onclick = () => insert(mockupId);
+  $('secondary').onclick = () => insert(null);
+  $('updateAll').onclick = () => post({ type: 'update-all' });
+
+  // Drag to turn the device (as in the app).
+  const stage = $('stage');
+  let drag = null;
+  stage.addEventListener('pointerdown', (e) => {
+    if (!ctx || e.button !== 0) return;
+    drag = { x: e.clientX, y: e.clientY, rot: [...settings.rot] };
+    stage.setPointerCapture(e.pointerId);
+    stage.classList.add('dragging');
+  });
+  stage.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const k = 0.35;
+    settings.rot = [drag.rot[0] + (e.clientY - drag.y) * k, drag.rot[1] + (e.clientX - drag.x) * k, drag.rot[2]];
+    ctx.setSlotPose('d', app.devicePose({ rot: settings.rot }));
+    syncControls();
+  });
+  const end = () => {
+    if (!drag) return;
+    drag = null;
+    stage.classList.remove('dragging');
+    settings.rot = settings.rot.map((v) => Math.round(v * 10) / 10);
+    change({});
+  };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+}
+
+let saveTimer = null;
+function change(patch) {
+  settings = clean({ ...settings, ...patch });
+  syncControls();
+  if (ctx) queue(() => show(settings, source));
+  // Remember the last used settings for the next mockup.
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => post({ type: 'settings', settings }), 400);
+}
+
+function syncControls() {
+  const on = (id, pred) => { for (const b of $(id).querySelectorAll('button[data-v]')) b.classList.toggle('on', pred(b.dataset.v)); };
+  on('model', (v) => v === settings.model);
+  on('finish', (v) => v === settings.finish);
+  on('shadow', (v) => v === settings.shadow);
+  on('density', (v) => +v === settings.density);
+  const near = (a, b) => Math.abs(((((a - b) % 360) + 540) % 360) - 180) < 0.5;
+  [...$('angles').children].forEach((b, i) => b.classList.toggle('on', ANGLES[i].rot.every((r, j) => near(r, settings.rot[j]))));
+  $('primary').textContent = busy ? 'Rendering…' : mockupId ? 'Update mockup' : 'Insert mockup';
+  $('primary').disabled = busy || !ctx || !source;
+  $('secondary').hidden = !mockupId;
+  $('secondary').disabled = busy || !ctx;
+}
+
+function setBusy(on) {
+  busy = on;
+  syncControls();
+}
+
+/** Render and hand the mockup to Figma: replacing `replaceId`, or as a new one. */
+function insert(replaceId) {
+  if (!source || busy) return;
+  setBusy(true);
+  const s = { ...settings };
+  const src = source;
+  queue(async () => {
+    try {
+      await show(s, src);
+      const r = await render(s, src);
+      post({ type: 'place', ...r, settings: s, sourceId: src.id, mockupId: replaceId });
+    } catch (err) {
+      setBusy(false);
+      throw err;
+    }
+  });
+}
+
+function showMsg(html) {
+  $('msg').innerHTML = html;
+  $('msg').hidden = false;
+}
+function hideMsg() {
+  $('msg').hidden = true;
+}
+function escapeHTML(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+start().catch((err) => {
+  console.error(err);
+  showMsg(`<span class="err">Couldn’t start the renderer: ${escapeHTML(err.message || err)}</span>`);
+});
+</script>
+</body>
+</html>

@@ -26,7 +26,9 @@ const baseName = (name) => (name || '').replace(/\.\d+$/, '');
  */
 export async function loadDevice(id) {
   if (!cache.has(id)) {
-    cache.set(id, loader.loadAsync(`models/${id}.glb`));
+    // Relative to this file, not the page, so the Figma plugin (another page)
+    // finds the models too.
+    cache.set(id, loader.loadAsync(new URL(`../models/${id}.glb`, import.meta.url).href));
   }
   const gltf = await cache.get(id);
   const root = gltf.scene.clone(true);

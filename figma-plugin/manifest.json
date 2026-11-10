@@ -1,0 +1,28 @@
+{
+  "name": "Mockup3D Studio (local)",
+  "id": "mockup3d-studio-local",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["https://cdn.jsdelivr.net"],
+    "devAllowedDomains": [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      "http://localhost:5176",
+      "http://localhost:5177"
+    ],
+    "reasoning": "The panel renders the mockups with Mockup3D Studio's own renderer, device models and lighting: from the app running on this computer (python3 serve.py) when it is, otherwise from the app on GitHub through jsDelivr, which also serves three.js. Your designs never leave Figma and this computer."
+  },
+  "menu": [
+    { "name": "Mockup a frame", "command": "open" },
+    { "name": "Update mockups on this page", "command": "update-all" }
+  ],
+  "relaunchButtons": [
+    { "command": "edit", "name": "Edit mockup" },
+    { "command": "update", "name": "Update mockup", "multipleSelection": true }
+  ]
+}

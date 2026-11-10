@@ -6,6 +6,9 @@ edits and rebuilt models show up on a normal reload.
 
 It also answers /version.json with the git commit this folder is on, so the
 app can tell you when GitHub has a newer version (js/update-check.js).
+
+The Figma plugin (figma-plugin/) loads the app's code, models and HDRI from
+here, so those folders can be read by other pages (CORS). Nothing else is.
 """
 import errno
 import http.server
@@ -28,7 +31,20 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
+        if shared(self.path):
+            self.send_header("Access-Control-Allow-Origin", "*")
+            # Lets a page on the web (Figma) reach this local server.
+            self.send_header("Access-Control-Allow-Private-Network", "true")
         super().end_headers()
+
+    def do_OPTIONS(self):
+        # A browser's preflight check before a cross-origin request.
+        self.send_response(204 if shared(self.path) else 403)
+        if shared(self.path):
+            self.send_header("Access-Control-Allow-Methods", "GET")
+            self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self):
         if self.path.split("?")[0] == "/version.json":
@@ -40,6 +56,15 @@ class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(body)
             return
         super().do_GET()
+
+
+# What the Figma plugin may load from here.
+SHARED = ("/js/", "/models/", "/env/", "/version.json")
+
+
+def shared(path):
+    path = path.split("?")[0]
+    return path.startswith(SHARED) and ".." not in path
 
 
 def git(*args):
