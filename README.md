@@ -72,6 +72,10 @@ Drop in a screenshot or a screen recording, choose an angle (or a whole animatio
   - [Adding your own device models](#adding-your-own-device-models)
   - [Shortcuts](#shortcuts)
 - [For developers](#for-developers)
+  - [Publishing](#publishing)
+  - [Code layout](#code-layout)
+  - [Devices](#devices)
+  - [Rebuilding the models and the HDRI](#rebuilding-the-models-and-the-hdri)
 - [Licence](#licence)
 
 ---
@@ -448,6 +452,28 @@ You only need this to share the app with others by link, or to install it on an 
 **GitHub Pages** (free for public repos): push the repo to GitHub, then in the repo's **Settings → Pages** choose *Deploy from a branch*, branch `main`, folder `/ (root)`. A minute later it's live at `https://<your-name>.github.io/<repo-name>/`; share that link. Installing needs HTTPS, which Pages provides (or `localhost` while testing).
 
 **README media** live in `docs/media/` (the screenshots and video at the top of this file, and the screen recordings in Your first mockup and Environment). They aren't part of the app, so they're not in `sw.js`. GitHub won't play a video stored in the repo inside the README, so videos are shown as GIFs: `animation.gif` is made from `animation.mp4` (600 px, 20 fps) and links to it; `drop-your-design.gif`, `templates.gif`, `motion-preset.gif` and `hdri-rotate-zoom.gif` are screen recordings of the app (1200 px wide, 15 fps).
+
+## Code layout
+
+Plain JavaScript modules, no build step. `js/main.js` starts the app; the parts it's made of are in `js/app/`, one file per area:
+
+| File | What it does |
+|---|---|
+| `state.js` | Settings saved in the browser, their defaults, upgrading older ones, and the animation |
+| `history.js` | Saving settings, and undo / redo |
+| `ctx.js`, `instances.js` | The 3D scene, and each device in it (its model, design and live pose) |
+| `animation.js` | Poses, keyframes, playback, aligning and angle animations |
+| `designs.js`, `clipboard.js` | Designs on the devices (drop, paste, videos); copying and pasting keyframes |
+| `scene-list.js` | The Scene list and selecting devices |
+| `viewer.js` | Dragging in the viewer, orbiting, and the canvas zoom |
+| `params.js`, `controls.js`, `ui-sync.js` | Inspector values; wiring up the controls; keeping the UI in step with the state |
+| `presets.js`, `scene-templates.js` | Angle and motion presets; templates |
+| `transport.js`, `timeline-panel.js` | Play controls and timecode; the timeline panel |
+| `environment.js`, `models.js` | HDRI lighting and the background; imported device models |
+| `projects.js`, `export.js` | `.m3d` projects; PNG and MP4 export |
+| `keyboard.js`, `status.js`, `util.js` | Shortcuts, the status bar, small helpers |
+
+The rest of `js/` holds the lower-level pieces they use: the renderer (`scene.js`), device models (`devices.js`, `custom-devices.js`), keyframes and easing (`timeline.js`, `easing.js`, `timeline-ui.js`), and exporting and file formats.
 
 **Adding files:** `sw.js` saves a fixed list of files for offline use (`APP_FILES` and `CDN_FILES`). When you add a new file the app loads, such as a new JS module, model or HDRI, add it there too. Otherwise the app still works online, but that file is missing offline.
 
