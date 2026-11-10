@@ -121,7 +121,7 @@ async function sendSelection() {
   const token = ++selToken;
   const sel = figma.currentPage.selection;
   if (sel.length !== 1) {
-    post({ type: 'source', none: true, reason: sel.length ? 'Select just one frame' : 'Select a frame to mock up' });
+    post({ type: 'source', none: true, kind: sel.length ? 'many' : 'none', reason: sel.length ? 'Select just one frame' : 'Select a frame to mock up' });
     return;
   }
   const node = sel[0];
@@ -134,7 +134,7 @@ async function sendSelection() {
       return;
     }
   } else if (!isSource(node)) {
-    post({ type: 'source', none: true, reason: 'Select a frame, component or group' });
+    post({ type: 'source', none: true, kind: 'type', reason: 'Select a frame, component or group' });
     return;
   }
   post({ type: 'source', loading: true, name: source.name });

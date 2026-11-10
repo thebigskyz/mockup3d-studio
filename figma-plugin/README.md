@@ -20,7 +20,7 @@ Development plugins only run in the desktop app, not in Figma in a browser.
 
 ## Use it
 
-- **Select a frame** (or a component, instance or group). The panel shows it on the device.
+- **Select the frame of a screen design** (or a component, instance or group). The panel shows it on the device. With nothing selected, or a layer inside a screen, the preview says what to select.
 - Choose the **device** (iPhone 18 Pro or iPad Pro 11″), an **angle** (or drag the preview to turn it), the **finish**, a soft **shadow** and the **resolution**. Landscape frames go on a landscape device.
 - **Insert mockup** renders it and places it to the right of the frame, sized so its screen is about the frame's size. 2× resolution (the default) means two image pixels per Figma point.
 - **Select a mockup** to edit it: the panel shows its settings. **Update mockup** replaces it; **Insert as new** adds another one. A selected mockup also has **Edit mockup** and **Update mockup** buttons in Figma's right-hand panel.
@@ -46,7 +46,7 @@ The plugin remembers your last settings for the next mockup. Your designs never 
 | `ui.html` | The plugin's panel (a web page) | Loads `js/scene.js`, `js/devices.js` and the rest of the renderer from the app, shows the preview and renders the PNG |
 | `dev.html` | A browser | A test bench for working on the plugin without Figma (below) |
 
-Rendering happens in the panel because Figma's side of a plugin has no WebGL. The two halves talk with messages: the selection's PNG goes to the panel, the rendered mockup comes back.
+Rendering happens in the panel because Figma's side of a plugin has no WebGL. Without the local app, the panel asks GitHub for the latest commit on `main` and loads that exact version through jsDelivr (a branch's files can stay cached in Figma for days; a commit's never change). The two halves talk with messages: the selection's PNG goes to the panel, the rendered mockup comes back.
 
 The app serves its `js/`, `models/` and `env/` folders to the plugin (CORS headers in `serve.py`), and the models and HDRI load relative to `js/` so they're found from the plugin's page too. Commits that only change this folder don't trigger the app's "Update on GitHub" notice.
 

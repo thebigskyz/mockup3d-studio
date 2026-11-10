@@ -52,6 +52,14 @@
     padding: 24px; text-align: center; color: var(--text2); background: color-mix(in srgb, var(--bg) 82%, transparent);
   }
   .msg[hidden] { display: none; }
+  /* What to do when no screen design is selected. */
+  .empty {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    padding: 28px; text-align: center; color: var(--text2); background: color-mix(in srgb, var(--bg) 70%, transparent); pointer-events: none;
+  }
+  .empty[hidden] { display: none; }
+  .empty b { color: var(--text); font-size: 13px; font-weight: 600; }
+  .empty svg { width: 34px; height: 34px; margin-bottom: 4px; color: var(--text2); }
   .msg code { color: var(--text); }
 
   .src { display: flex; justify-content: space-between; gap: 8px; color: var(--text2); min-height: 16px; }
@@ -87,6 +95,10 @@
     <span class="brand-name">Mockup3D <b>Studio</b></span>
   </header>
   <div class="stage" id="stage" title="Drag to turn the device">
+    <div class="empty" id="empty" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10 5h4"/><path d="M3 9.5l2.5 2.5L3 14.5M21 9.5L18.5 12l2.5 2.5"/></svg>
+      <b id="emptyTitle"></b><span id="emptyText"></span>
+    </div>
     <div class="msg" id="msg">Starting…</div>
   </div>
   <div class="src" id="src"><span class="hint">Select a frame to mock up</span></div>
@@ -131,9 +143,9 @@ import * as THREE from 'three';
 // Mockup3D Studio running on this computer (python3 serve.py picks the next
 // free port when 5173 is taken). Listed in manifest.json's devAllowedDomains.
 const PORTS = [5173, 5174, 5175, 5176, 5177];
-// Otherwise the app on GitHub (its main branch, through jsDelivr's CDN).
-const GITHUB = 'https://cdn.jsdelivr.net/gh/thebigskyz/mockup3d-studio@main';
-const REPO = 'https://github.com/thebigskyz/mockup3d-studio';
+// Otherwise the app on GitHub, through jsDelivr's CDN (see githubBase).
+const GITHUB_REPO = 'thebigskyz/mockup3d-studio';
+const REPO = `https://github.com/${GITHUB_REPO}`;
 const ANGLES = [
   { label: 'Front', rot: [0, 0, 0] },
   { label: 'Left', rot: [0, -30, 0] },
@@ -215,11 +227,27 @@ async function findApp() {
   return null;
 }
 
+/**
+ * The app on GitHub, at the latest commit on main. jsDelivr lets browsers
+ * keep a branch's files for days, so a plugin loading "@main" could run an
+ * old version; a commit's files never change, so they're always right.
+ */
+async function githubBase() {
+  let ref = 'main';
+  try {
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits/main`, { headers: { Accept: 'application/vnd.github.sha' } });
+    if (res.ok) ref = (await res.text()).trim();
+  } catch {
+    /* GitHub's API unreachable: the branch will do */
+  }
+  return `https://cdn.jsdelivr.net/gh/${GITHUB_REPO}@${ref}`;
+}
+
 async function start() {
   showMsg('Connecting to Mockup3D Studio…');
   const local = await findApp();
   if (!local) console.info('Mockup3D Studio isn’t reachable on this computer; using GitHub.', connectError);
-  const base = local || GITHUB;
+  const base = local || (await githubBase());
   showMsg(local ? 'Loading the renderer…' : 'Loading the renderer from GitHub…');
   const load = (path) => import(`${base}/js/${path}`);
   let modules;
@@ -256,6 +284,7 @@ async function start() {
   buildControls();
   await queue(() => show(settings, source));
   hideMsg();
+  syncEmpty();
   post({ type: 'ready' });
   syncControls();
 }
@@ -344,11 +373,27 @@ async function renderJob(msg) {
 // ---------------------------------------------------------------------------
 // Selection
 // ---------------------------------------------------------------------------
+// What the preview says when there's no screen design to show, by what's selected.
+const EMPTY = {
+  none: ['Select your screen design', 'Click the frame of one of your app screens on the canvas, such as an iPhone frame (393\u00a0×\u00a0852). It appears on the device here.'],
+  many: ['Select just one screen', 'Mockups are made one frame at a time. Click a single frame of your screen design.'],
+  type: ['Select the whole screen', 'That’s a layer inside a screen. Click the frame’s name above it on the canvas to select the whole frame.'],
+};
+let emptyKind = 'none';
+
+function syncEmpty() {
+  const [title, text] = EMPTY[emptyKind] || ['Can’t show this', $('src').textContent];
+  $('emptyTitle').textContent = title;
+  $('emptyText').textContent = text;
+  $('empty').hidden = !!source || !ctx || !$('msg').hidden;
+}
+
 function onSource(msg) {
   const el = $('src');
   if (msg.none) {
     source = null;
     mockupId = null;
+    emptyKind = msg.kind || 'other';
     el.innerHTML = `<span class="hint">${escapeHTML(msg.reason)}</span>`;
   } else if (msg.loading) {
     el.innerHTML = `<b>${escapeHTML(msg.name)}</b><span class="hint">Exporting…</span>`;
@@ -360,6 +405,7 @@ function onSource(msg) {
     el.innerHTML = `<b>${mockupId ? 'Mockup of ' : ''}${escapeHTML(source.name)}</b><span>${Math.round(source.w)} × ${Math.round(source.h)}</span>`;
   }
   syncControls();
+  syncEmpty();
   if (ctx) queue(() => show(settings, source));
 }
 
