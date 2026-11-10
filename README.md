@@ -51,7 +51,7 @@ Drop in a screenshot or a screen recording, choose an angle (or a whole animatio
 - Save everything, including designs, imported models and a custom HDRI, as a single `.m3d` file.
 - Undo and redo for everything, with keyboard shortcuts throughout.
 - **Install it as an app** (Chrome, Edge, Safari). It works offline after the first visit.
-- **Figma plugin** (local version): mock up Figma frames on a 3D device right in Figma, with mockups that update when the frame changes. See [Figma plugin](#figma-plugin).
+- **Figma plugin**: mock up Figma frames on a 3D device right in Figma, with mockups that update when the frame changes. See [Figma plugin](#figma-plugin).
 
 ## Contents
 
@@ -464,7 +464,7 @@ You only need this to share the app with others by link, or to install it on an 
 
 ## Figma plugin
 
-`figma-plugin/` holds a Figma plugin that renders mockups of Figma frames with this app's renderer and places them on the canvas, linked to their frames so they can be updated. It's a development plugin for the Figma desktop app: run `python3 serve.py`, then in Figma choose **Plugins › Development › Import plugin from manifest…** and pick `figma-plugin/manifest.json`. Setup, use and a test bench that runs it without Figma are in [figma-plugin/README.md](figma-plugin/README.md).
+`figma-plugin/` holds a Figma plugin that renders mockups of Figma frames with this app's renderer and places them on the canvas, linked to their frames so they can be updated. It's a development plugin for the Figma desktop app: run `python3 serve.py`, then in Figma choose **Plugins › Development › Import plugin from manifest…** and pick `figma-plugin/manifest.json`. Setup, use and a test bench that runs it without Figma are in [figma-plugin/README.md](figma-plugin/README.md); publishing it to Figma Community is in [figma-plugin/PUBLISHING.md](figma-plugin/PUBLISHING.md).
 
 The web app never loads anything from that folder, so plugin changes don't affect it.
 
@@ -517,7 +517,7 @@ The HDRI comes from another script. It takes about 5 minutes on an Apple-silicon
 /Applications/Blender.app/Contents/MacOS/Blender -b -P blender/build_hdri.py
 ```
 
-It builds the studio, renders it as a 360° panorama and writes `env/studio-panels.exr`. The softbox positions and light strengths are in `build_studio_panels()`.
+It builds the studio, renders it as a 360° panorama and writes `env/studio-panels.exr`. The softbox positions and light strengths are in `build_studio_panels()`. The Figma plugin loads a 2K copy, `env/studio-panels-2k.exr`; make it again afterwards with `/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P blender/downscale_hdri.py -- env/studio-panels.exr env/studio-panels-2k.exr`.
 
 If you change a model by hand, keep these names, which the app relies on:
 

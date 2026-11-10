@@ -143,8 +143,12 @@ import * as THREE from 'three';
 // Mockup3D Studio running on this computer (python3 serve.py picks the next
 // free port when 5173 is taken). Listed in manifest.json's devAllowedDomains.
 const PORTS = [5173, 5174, 5175, 5176, 5177];
-// Otherwise the app on GitHub, through jsDelivr's CDN (see githubBase).
+// Otherwise (always, once published: Figma only lets plugins in development
+// reach localhost) the app on GitHub at this release tag, through jsDelivr's
+// CDN. A tag never changes, so pushing to the web app can't change or break
+// the published plugin; tag a new release to update it (see README.md).
 const GITHUB_REPO = 'thebigskyz/mockup3d-studio';
+const RELEASE = 'plugin-1.0.0';
 const REPO = `https://github.com/${GITHUB_REPO}`;
 const ANGLES = [
   { label: 'Front', rot: [0, 0, 0] },
@@ -163,6 +167,10 @@ const SOFT_SHADOW = { mode: 'backdrop', color: '#000000', strength: 0.3, softnes
 // The rendered square is this much bigger than the frame, so the screen in
 // the mockup comes out about the frame's size.
 const RENDER_MARGIN = 1.2;
+// With a shadow, the camera pulls back this far so the shadow isn't cut off
+// at the edges (the render grows to match, so the device keeps its size).
+const SHADOW_ZOOM = 0.62;
+const zoomFor = (s) => (s.shadow === 'soft' ? SHADOW_ZOOM : 1);
 
 const $ = (id) => document.getElementById(id);
 const post = (msg) => parent.postMessage({ pluginMessage: msg }, '*');
@@ -227,27 +235,11 @@ async function findApp() {
   return null;
 }
 
-/**
- * The app on GitHub, at the latest commit on main. jsDelivr lets browsers
- * keep a branch's files for days, so a plugin loading "@main" could run an
- * old version; a commit's files never change, so they're always right.
- */
-async function githubBase() {
-  let ref = 'main';
-  try {
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits/main`, { headers: { Accept: 'application/vnd.github.sha' } });
-    if (res.ok) ref = (await res.text()).trim();
-  } catch {
-    /* GitHub's API unreachable: the branch will do */
-  }
-  return `https://cdn.jsdelivr.net/gh/${GITHUB_REPO}@${ref}`;
-}
-
 async function start() {
   showMsg('Connecting to Mockup3D Studio…');
   const local = await findApp();
   if (!local) console.info('Mockup3D Studio isn’t reachable on this computer; using GitHub.', connectError);
-  const base = local || (await githubBase());
+  const base = local || `https://cdn.jsdelivr.net/gh/${GITHUB_REPO}@${RELEASE}`;
   showMsg(local ? 'Loading the renderer…' : 'Loading the renderer from GitHub…');
   const load = (path) => import(`${base}/js/${path}`);
   let modules;
@@ -279,7 +271,9 @@ async function start() {
   ctx.setEnvTint(app.kelvinTint(7000));
   ctx.setEnvAdjust({ highlights: 0.28, contrast: 1.5 });
   ctx.setCamera(app.cameraPose());
-  app.loadEnvironment('studio-panels').then((tex) => tex && ctx.setEnvironment(tex)).catch((err) => console.warn('HDRI', err));
+  // The studio lighting, as a 2K copy (3 MB rather than the app's 12 MB;
+  // made by blender/downscale_hdri.py).
+  loadHDRI(`${base}/env/studio-panels-2k.exr`).then((tex) => ctx.setEnvironment(tex)).catch((err) => console.warn('HDRI', err));
 
   buildControls();
   await queue(() => show(settings, source));
@@ -287,6 +281,13 @@ async function start() {
   syncEmpty();
   post({ type: 'ready' });
   syncControls();
+}
+
+async function loadHDRI(url) {
+  const { EXRLoader } = await import('three/addons/loaders/EXRLoader.js');
+  const tex = await new EXRLoader().setDataType(THREE.HalfFloatType).loadAsync(url);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  return tex;
 }
 
 // ---------------------------------------------------------------------------
@@ -324,7 +325,7 @@ async function show(s, src) {
   d.setFinish(app.FINISHES.find((f) => f.id === s.finish) || app.FINISHES[0]);
   d.setGlare(0.01);
   d.setIsland(true);
-  d.setLogo?.(true);
+  d.setLogo?.(false); // the back logo is a trademark: never in plugin mockups
   const landscape = !!src && src.w > src.h;
   ctx.setSlotLandscape('d', landscape);
   ctx.setSlotPose('d', app.devicePose({ rot: s.rot }));
@@ -350,10 +351,19 @@ async function show(s, src) {
 /** Render the mockup as a trimmed, transparent PNG. */
 async function render(s, src) {
   const long = Math.max(src.w, src.h);
-  const size = Math.round(Math.min(4096, Math.max(512, long * RENDER_MARGIN * s.density)));
-  const blob = await app.renderPNG(ctx, { width: size, height: size, trim: true, supersample: 2 });
+  const want = (long * RENDER_MARGIN * s.density) / zoomFor(s);
+  // Figma images are at most 4096 px; a capped render has fewer pixels per
+  // point (`density`), which Figma uses to size the mockup.
+  const size = Math.round(Math.min(4096, Math.max(512, want)));
+  ctx.setCamera(app.cameraPose({ zoom: zoomFor(s) })); // the preview stays at full size
+  let blob;
+  try {
+    blob = await app.renderPNG(ctx, { width: size, height: size, trim: true, supersample: 2 });
+  } finally {
+    ctx.setCamera(app.cameraPose());
+  }
   const bmp = await createImageBitmap(blob);
-  return { bytes: new Uint8Array(await blob.arrayBuffer()), width: bmp.width, height: bmp.height };
+  return { bytes: new Uint8Array(await blob.arrayBuffer()), width: bmp.width, height: bmp.height, density: (s.density * size) / want };
 }
 
 /** Render a mockup for Figma (updating mockups), then go back to the selection. */

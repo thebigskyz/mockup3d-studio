@@ -1,8 +1,8 @@
-# Mockup3D Studio for Figma (local version)
+# Mockup3D Studio for Figma
 
 Put a Figma frame on a 3D iPhone or iPad, right in Figma. The plugin renders the mockup with Mockup3D Studio's own renderer and places it next to the frame as a transparent image. Each mockup stays linked to its frame: change the design, click **Update**, and the mockup is rendered again.
 
-This is a development plugin: you add it to the Figma desktop app from this folder. It isn't on Figma Community.
+You add it to the Figma desktop app from this folder (a development plugin). To put it on Figma Community, see [PUBLISHING.md](PUBLISHING.md).
 
 ## Set it up
 
@@ -12,9 +12,9 @@ This is a development plugin: you add it to the Figma desktop app from this fold
    python3 serve.py
    ```
 
-   The plugin uses your copy of the app while this runs. When it can't reach it, it uses the app on GitHub instead, so the plugin still works (its corner link then reads **Web app on GitHub** instead of **Open web app**).
+   The plugin uses your copy of the app while this runs. When it can't reach it, it uses a release of the app on GitHub instead, so the plugin still works (the button under Insert mockup then reads **Web app on GitHub** instead of **Open web app**).
 2. In the **Figma desktop app**, open a design file, then choose **Plugins › Development › Import plugin from manifest…** and pick `figma-plugin/manifest.json` in this repo. You only do this once.
-3. Run it from **Plugins › Development › Mockup3D Studio (local) › Mockup a frame**.
+3. Run it from **Plugins › Development › Mockup3D Studio › Mockup a frame**.
 
 Development plugins only run in the desktop app, not in Figma in a browser.
 
@@ -46,7 +46,7 @@ The plugin remembers your last settings for the next mockup. Your designs never 
 | `ui.html` | The plugin's panel (a web page) | Loads `js/scene.js`, `js/devices.js` and the rest of the renderer from the app, shows the preview and renders the PNG |
 | `dev.html` | A browser | A test bench for working on the plugin without Figma (below) |
 
-Rendering happens in the panel because Figma's side of a plugin has no WebGL. Without the local app, the panel asks GitHub for the latest commit on `main` and loads that exact version through jsDelivr (a branch's files can stay cached in Figma for days; a commit's never change). The two halves talk with messages: the selection's PNG goes to the panel, the rendered mockup comes back.
+Rendering happens in the panel because Figma's side of a plugin has no WebGL. Without the local app (always, once published), the panel loads the app from GitHub through jsDelivr at the release tag in `RELEASE` (`ui.html`), so pushing to the web app can't change the published plugin. It loads a 2K copy of the lighting (`env/studio-panels-2k.exr`, made by `blender/downscale_hdri.py`) and always hides the device's back logo. The two halves talk with messages: the selection's PNG goes to the panel, the rendered mockup comes back.
 
 The app serves its `js/`, `models/` and `env/` folders to the plugin (CORS headers in `serve.py`), and the models and HDRI load relative to `js/` so they're found from the plugin's page too. Commits that only change this folder don't trigger the app's "Update on GitHub" notice.
 

@@ -160,7 +160,7 @@ async function sendSelection() {
 // ---------------------------------------------------------------------------
 async function place(msg) {
   const source = await figma.getNodeByIdAsync(msg.sourceId);
-  const density = msg.settings.density || 2;
+  const density = msg.density || msg.settings.density || 2;
   let node = msg.mockupId ? await figma.getNodeByIdAsync(msg.mockupId) : null;
   const replacing = !!(node && !node.removed);
   if (!replacing) {
@@ -214,7 +214,7 @@ async function updateMockups(nodes) {
       }
       post({ type: 'progress', text: 'Updating ' + (i + 1) + ' of ' + list.length + ': ' + node.name });
       const render = await renderInPanel(exp, data.settings);
-      setImage(node, render, data.settings.density || 2, true);
+      setImage(node, render, render.density || data.settings.density || 2, true);
       writeMockup(node, { v: 1, source: data.source, hash: exp.hash, settings: data.settings });
       updated++;
     } catch (e) {
