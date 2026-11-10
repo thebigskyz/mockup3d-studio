@@ -29,8 +29,7 @@ export async function loadEnvironment(id) {
   const env = ENVIRONMENTS.find((e) => e.id === id);
   if (!env?.file) return null;
   if (!cache.has(id)) {
-    // Relative to this file, not the page (see loadDevice).
-    const p = loadURL(new URL(`../${env.file}`, import.meta.url).href, env.file);
+    const p = loadURL(env.file, env.file);
     cache.set(id, p);
     p.catch(() => cache.delete(id));
   }
